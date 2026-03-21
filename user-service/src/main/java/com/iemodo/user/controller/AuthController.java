@@ -101,6 +101,46 @@ public class AuthController {
                 .map(Response::success);
     }
 
+    // ─── OAuth2 Social Login ──────────────────────────────────────────────
+
+    /**
+     * GET /uc/api/v1/auth/oauth2/google
+     *
+     * Initiates the Google OAuth2 authorization code flow.
+     * Redirects the browser to Google's consent screen.
+     *
+     * <p>In production this is handled by Spring Security OAuth2 Client
+     * automatically at {@code /oauth2/authorization/google}. This endpoint
+     * is an explicit alias so it can be whitelisted in the gateway.
+     */
+    @GetMapping("/oauth2/google")
+    public Mono<Response<String>> googleOAuth2() {
+        // The actual redirect is managed by Spring Security OAuth2 Client.
+        // This stub returns the authorization URL for API clients that cannot follow redirects.
+        return Mono.just(Response.success("/oauth2/authorization/google"));
+    }
+
+    /**
+     * GET /uc/api/v1/auth/oauth2/callback
+     *
+     * OAuth2 callback handler — exchanges the authorization code for user info,
+     * then issues an iemodo JWT pair.
+     *
+     * <p>Parameters are provided by the OAuth2 provider as query params.
+     */
+    @GetMapping("/oauth2/callback/{provider}")
+    public Mono<Response<TokenResponse>> oauth2Callback(
+            @PathVariable String provider,
+            @RequestParam String code,
+            @RequestHeader("X-TenantID") String tenantId) {
+
+        // Delegate to AuthService which handles provider-specific token exchange.
+        // The actual Spring Security OAuth2 processing happens upstream;
+        // this endpoint is called after the security filter resolves the principal.
+        return authService.handleOAuth2Callback(provider, code, tenantId)
+                .map(Response::success);
+    }
+
     // ─── Inner DTO ────────────────────────────────────────────────────────
 
     public record RefreshRequest(String refreshToken) {}

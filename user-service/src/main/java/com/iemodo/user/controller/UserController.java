@@ -1,19 +1,19 @@
 package com.iemodo.user.controller;
 
-import com.iemodo.common.exception.BusinessException;
-import com.iemodo.common.exception.ErrorCode;
 import com.iemodo.common.response.Response;
-import com.iemodo.user.domain.User;
+import com.iemodo.user.dto.UpdateUserRequest;
 import com.iemodo.user.dto.UserDTO;
-import com.iemodo.user.repository.UserRepository;
+import com.iemodo.user.service.UserService;
+import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
-import org.springframework.http.HttpStatus;
 import org.springframework.web.bind.annotation.*;
 import reactor.core.publisher.Mono;
 
 /**
- * User management endpoints (requires valid JWT, enforced at gateway).
+ * User profile management endpoints.
+ * All requests require a valid JWT (enforced at the API Gateway).
+ * The gateway injects {@code X-User-ID} from the verified JWT.
  */
 @Slf4j
 @RestController
@@ -21,21 +21,27 @@ import reactor.core.publisher.Mono;
 @RequiredArgsConstructor
 public class UserController {
 
-    private final UserRepository userRepository;
+    private final UserService userService;
 
     /**
      * GET /uc/api/v1/users/me
      * Returns the current authenticated user's profile.
-     * X-User-ID is set by the gateway after JWT validation.
      */
     @GetMapping("/me")
     public Mono<Response<UserDTO>> getCurrentUser(
             @RequestHeader("X-User-ID") Long userId) {
+        return userService.getUser(userId).map(Response::success);
+    }
 
-        return userRepository.findById(userId)
-                .switchIfEmpty(Mono.error(new BusinessException(
-                        ErrorCode.USER_NOT_FOUND, HttpStatus.NOT_FOUND)))
-                .map(user -> Response.success(toDTO(user)));
+    /**
+     * PUT /uc/api/v1/users/me
+     * Updates the current user's display name and/or avatar URL.
+     */
+    @PutMapping("/me")
+    public Mono<Response<UserDTO>> updateCurrentUser(
+            @RequestHeader("X-User-ID") Long userId,
+            @RequestBody @Valid UpdateUserRequest request) {
+        return userService.updateUser(userId, request).map(Response::success);
     }
 
     /**
@@ -44,23 +50,6 @@ public class UserController {
      */
     @GetMapping("/{userId}")
     public Mono<Response<UserDTO>> getUserById(@PathVariable Long userId) {
-        return userRepository.findById(userId)
-                .switchIfEmpty(Mono.error(new BusinessException(
-                        ErrorCode.USER_NOT_FOUND, HttpStatus.NOT_FOUND)))
-                .map(user -> Response.success(toDTO(user)));
-    }
-
-    // ─── Helpers ──────────────────────────────────────────────────────────
-
-    private UserDTO toDTO(User user) {
-        return UserDTO.builder()
-                .id(user.getId())
-                .email(user.getEmail())
-                .displayName(user.getDisplayName())
-                .avatarUrl(user.getAvatarUrl())
-                .oauthProvider(user.getOauthProvider())
-                .status(user.getStatus())
-                .createdAt(user.getCreatedAt())
-                .build();
+        return userService.getUser(userId).map(Response::success);
     }
 }

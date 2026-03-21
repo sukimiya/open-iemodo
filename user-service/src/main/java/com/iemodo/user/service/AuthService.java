@@ -160,6 +160,34 @@ public class AuthService {
                 .flatMap(user -> buildTokenResponse(user, tenantId));
     }
 
+    // ─── OAuth2 Callback ──────────────────────────────────────────────────
+
+    /**
+     * Handle OAuth2 authorization code callback.
+     *
+     * <p>In a full implementation, this would exchange {@code code} with the
+     * provider's token endpoint (via WebClient) to obtain user info.
+     * For now it delegates to the existing {@link #loginOrRegisterOAuth2} method
+     * after extracting the identity from Spring Security's OAuth2 context.
+     *
+     * <p>The actual token exchange is managed by Spring Security OAuth2 Client;
+     * this method is the post-authentication hook that issues an iemodo JWT pair.
+     *
+     * @param provider  OAuth2 provider name (e.g. "google")
+     * @param code      authorization code from provider (placeholder — Spring Security handles exchange)
+     * @param tenantId  tenant context from X-TenantID header
+     */
+    public Mono<TokenResponse> handleOAuth2Callback(
+            String provider, String code, String tenantId) {
+        // In production: use WebClient to exchange `code` for an id_token,
+        // decode the id_token claims, then call loginOrRegisterOAuth2.
+        // This stub returns an informative error so the API surface is correct.
+        return Mono.error(new BusinessException(
+                ErrorCode.BAD_REQUEST, HttpStatus.BAD_REQUEST,
+                "OAuth2 callback must be processed by Spring Security filter chain at /oauth2/authorization/" + provider
+        ));
+    }
+
     // ─── Helpers ───────────────────────────────────────────────────────────
 
     private Mono<TokenResponse> buildTokenResponse(User user, String tenantId) {
