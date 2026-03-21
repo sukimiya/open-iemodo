@@ -24,6 +24,9 @@ logs/
 .env
 *.env.local
 
+# RSA private keys — never commit
+**/jwt/private.pem
+
 # Spring Boot
 /spring-shell.log
 

@@ -12,7 +12,7 @@ services:
       POSTGRES_USER: iemodo
       POSTGRES_PASSWORD: iemodo123
     ports:
-      - "5432:5432"
+      - "5433:5432"    # 5432 occupied by local PostgreSQL on macOS
     volumes:
       - postgres_data:/var/lib/postgresql/data
       - ./scripts/init-db.sql:/docker-entrypoint-initdb.d/init-db.sql

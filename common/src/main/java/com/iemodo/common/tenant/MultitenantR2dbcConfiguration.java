@@ -3,33 +3,45 @@ package com.iemodo.common.tenant;
 import io.r2dbc.postgresql.PostgresqlConnectionConfiguration;
 import io.r2dbc.postgresql.PostgresqlConnectionFactory;
 import io.r2dbc.spi.ConnectionFactory;
-import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.boot.context.properties.EnableConfigurationProperties;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
-import org.springframework.data.r2dbc.config.AbstractR2dbcConfiguration;
-import org.springframework.data.r2dbc.repository.config.EnableR2dbcRepositories;
+import org.springframework.context.annotation.Primary;
+import org.springframework.data.r2dbc.convert.MappingR2dbcConverter;
+import org.springframework.data.r2dbc.convert.R2dbcCustomConversions;
+import org.springframework.data.r2dbc.core.DefaultReactiveDataAccessStrategy;
+import org.springframework.data.r2dbc.core.R2dbcEntityOperations;
+import org.springframework.data.r2dbc.core.R2dbcEntityTemplate;
+import org.springframework.data.r2dbc.dialect.PostgresDialect;
+import org.springframework.data.r2dbc.mapping.R2dbcMappingContext;
+import org.springframework.data.relational.RelationalManagedTypes;
+import org.springframework.data.relational.core.mapping.NamingStrategy;
+import org.springframework.r2dbc.connection.lookup.AbstractRoutingConnectionFactory;
+import org.springframework.r2dbc.core.DatabaseClient;
 
 import java.util.HashMap;
+import java.util.List;
 import java.util.Map;
 
 /**
- * R2DBC configuration that wires up a {@link PostgresTenantConnectionFactory}
- * backed by per-tenant {@link PostgresqlConnectionFactory} instances.
+ * Multi-tenant R2DBC configuration.
  *
- * <p>Tenant list is loaded from Nacos / application YAML via
- * {@link TenantProperties}.  A Nacos config change (add/remove tenant) will
- * trigger a Spring Cloud config refresh which rebuilds the factory map.
+ * <p>Registers a {@link PostgresTenantConnectionFactory} that routes each
+ * reactive database operation to the correct per-tenant PostgreSQL schema
+ * based on the {@code X-TenantID} value stored in the Reactor Context.
  *
- * <p>Note: this class is NOT annotated with {@code @Configuration} itself —
- * individual services should extend or import it and add
- * {@link EnableR2dbcRepositories} pointing to their own repository packages.
+ * <p>Uses {@link PostgresDialect} explicitly so that {@link DatabaseClient}
+ * and the entity template can be built without metadata introspection
+ * (which would fail on the routing {@link AbstractRoutingConnectionFactory}).
+ *
+ * <p>Services import this configuration via {@code @Import} and declare
+ * {@code @EnableR2dbcRepositories} pointing to their own repository packages.
  */
 @Slf4j
 @Configuration
 @EnableConfigurationProperties(TenantProperties.class)
-public class MultitenantR2dbcConfiguration extends AbstractR2dbcConfiguration {
+public class MultitenantR2dbcConfiguration {
 
     private final TenantProperties tenantProperties;
 
@@ -37,8 +49,10 @@ public class MultitenantR2dbcConfiguration extends AbstractR2dbcConfiguration {
         this.tenantProperties = tenantProperties;
     }
 
-    @Override
+    // ─── Connection factory ───────────────────────────────────────────────
+
     @Bean
+    @Primary
     public ConnectionFactory connectionFactory() {
         Map<Object, ConnectionFactory> factories = buildTenantFactories();
 
@@ -46,39 +60,88 @@ public class MultitenantR2dbcConfiguration extends AbstractR2dbcConfiguration {
         routingFactory.setTargetConnectionFactories(factories);
         routingFactory.afterPropertiesSet();
 
-        log.info("Multi-tenant ConnectionFactory initialised with {} tenants: {}",
+        log.info("Multi-tenant ConnectionFactory initialised with {} tenant(s): {}",
                 factories.size(), factories.keySet());
         return routingFactory;
     }
 
-    // ─── Internal helpers ────────────────────────────────────────────────────
+    // ─── R2DBC infrastructure ─────────────────────────────────────────────
+
+    /**
+     * Build a {@link DatabaseClient} using the routing factory.
+     * We use {@link DatabaseClient#builder()} which does NOT call
+     * {@code getMetadata()} eagerly — metadata is resolved lazily on first use.
+     */
+    @Bean
+    @Primary
+    public DatabaseClient databaseClient() {
+        // Use the routing connection factory.
+        // BindMarkersFactory for PostgreSQL ($1, $2, ...) is set explicitly
+        // so that DatabaseClient does not need to call connectionFactory.getMetadata().
+        return DatabaseClient.builder()
+                .connectionFactory(connectionFactory())
+                .bindMarkers(PostgresDialect.INSTANCE.getBindMarkersFactory())
+                .build();
+    }
+
+    @Bean
+    @Primary
+    public R2dbcMappingContext r2dbcMappingContext() throws Exception {
+        R2dbcMappingContext context = new R2dbcMappingContext(NamingStrategy.INSTANCE);
+        context.setManagedTypes(RelationalManagedTypes.empty());
+        return context;
+    }
+
+    @Bean
+    @Primary
+    public R2dbcCustomConversions r2dbcCustomConversions() {
+        return R2dbcCustomConversions.of(PostgresDialect.INSTANCE, List.of());
+    }
+
+    @Bean
+    @Primary
+    public MappingR2dbcConverter r2dbcConverter() throws Exception {
+        return new MappingR2dbcConverter(r2dbcMappingContext(), r2dbcCustomConversions());
+    }
+
+    @Bean
+    @Primary
+    public DefaultReactiveDataAccessStrategy reactiveDataAccessStrategy() throws Exception {
+        return new DefaultReactiveDataAccessStrategy(PostgresDialect.INSTANCE, r2dbcConverter());
+    }
+
+    @Bean("r2dbcEntityTemplate")
+    @Primary
+    public R2dbcEntityOperations r2dbcEntityTemplate() throws Exception {
+        return new R2dbcEntityTemplate(databaseClient(), reactiveDataAccessStrategy());
+    }
+
+    // ─── Tenant factory building ──────────────────────────────────────────
 
     private Map<Object, ConnectionFactory> buildTenantFactories() {
         Map<Object, ConnectionFactory> map = new HashMap<>();
 
         for (TenantProperties.TenantDataSourceConfig cfg : tenantProperties.getTenants()) {
-            ConnectionFactory factory = createFactory(cfg);
-            map.put(cfg.getId(), factory);
-            log.debug("Registered ConnectionFactory for tenant '{}' → schema '{}'",
+            map.put(cfg.getId(), createFactory(cfg));
+            log.debug("Registered ConnectionFactory for tenant '{}' schema '{}'",
                     cfg.getId(), cfg.getSchema());
         }
 
         if (map.isEmpty()) {
-            log.warn("No tenant datasources configured! Check iemodo.tenants in Nacos / application.yml");
+            log.warn("No tenants configured — check iemodo.tenants in application.yml / Nacos");
         }
-
         return map;
     }
 
     private ConnectionFactory createFactory(TenantProperties.TenantDataSourceConfig cfg) {
-        PostgresqlConnectionConfiguration.Builder builder = PostgresqlConnectionConfiguration.builder()
-                .host(cfg.getHost())
-                .port(cfg.getPort())
-                .database(cfg.getDatabase())
-                .username(cfg.getUsername())
-                .password(cfg.getPassword());
+        PostgresqlConnectionConfiguration.Builder builder =
+                PostgresqlConnectionConfiguration.builder()
+                        .host(cfg.getHost())
+                        .port(cfg.getPort())
+                        .database(cfg.getDatabase())
+                        .username(cfg.getUsername())
+                        .password(cfg.getPassword());
 
-        // For SCHEMA isolation, set the default schema via options
         if (cfg.getType() == TenantProperties.IsolationType.SCHEMA
                 && cfg.getSchema() != null) {
             builder.schema(cfg.getSchema());

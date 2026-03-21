@@ -17,18 +17,10 @@ spring:
         group: IEMODO
         file-extension: yaml
 
-  # ─── R2DBC (multi-tenant routing via common module) ──────────────────────
-  # Actual per-tenant datasources are loaded from TenantProperties (Nacos)
-  # This block is a fallback for single-tenant local dev without Nacos
-  r2dbc:
-    url: r2dbc:postgresql://${DB_HOST:localhost}:${DB_PORT:5432}/${DB_NAME:iemodo}
-    username: ${DB_USERNAME:iemodo}
-    password: ${DB_PASSWORD:iemodo123}
-
   # ─── Flyway (blocking, runs once at startup) ─────────────────────────────
   flyway:
     enabled: true
-    url: jdbc:postgresql://${DB_HOST:localhost}:${DB_PORT:5432}/${DB_NAME:iemodo}
+    url: jdbc:postgresql://${DB_HOST:localhost}:${DB_PORT:5433}/${DB_NAME:iemodo}
     user: ${DB_USERNAME:iemodo}
     password: ${DB_PASSWORD:iemodo123}
     schemas: schema_tenant_001,schema_tenant_002
@@ -60,7 +52,7 @@ iemodo:
       type: SCHEMA
       schema: schema_tenant_001
       host: ${DB_HOST:localhost}
-      port: ${DB_PORT:5432}
+      port: ${DB_PORT:5433}
       database: ${DB_NAME:iemodo}
       username: ${DB_USERNAME:iemodo}
       password: ${DB_PASSWORD:iemodo123}
@@ -68,7 +60,7 @@ iemodo:
       type: SCHEMA
       schema: schema_tenant_002
       host: ${DB_HOST:localhost}
-      port: ${DB_PORT:5432}
+      port: ${DB_PORT:5433}
       database: ${DB_NAME:iemodo}
       username: ${DB_USERNAME:iemodo}
       password: ${DB_PASSWORD:iemodo123}
