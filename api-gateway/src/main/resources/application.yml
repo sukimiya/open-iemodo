@@ -1,0 +1,116 @@
+server:
+  port: 8080
+
+spring:
+  application:
+    name: api-gateway
+
+  # ─── Nacos Config ────────────────────────────────────────────────────────
+  config:
+    import: "nacos:api-gateway.yaml?group=IEMODO&refreshEnabled=true"
+
+  cloud:
+    nacos:
+      server-addr: ${NACOS_SERVER_ADDR:localhost:8848}
+      discovery:
+        namespace: ${NACOS_NAMESPACE:}
+        group: IEMODO
+        register-enabled: true
+      config:
+        namespace: ${NACOS_NAMESPACE:}
+        group: IEMODO
+        file-extension: yaml
+
+    # ─── Gateway Routes ────────────────────────────────────────────────────
+    gateway:
+      discovery:
+        locator:
+          enabled: false         # manual routes only — no auto-discovery routing
+      routes:
+        # User Service: /uc/**
+        - id: user-service-route
+          uri: lb://user-service
+          predicates:
+            - Path=/uc/**
+          filters:
+            - name: RequestRateLimiter
+              args:
+                redis-rate-limiter.replenishRate: 100
+                redis-rate-limiter.burstCapacity: 200
+                redis-rate-limiter.requestedTokens: 1
+
+        # Order Service: /oc/**
+        - id: order-service-route
+          uri: lb://order-service
+          predicates:
+            - Path=/oc/**
+          filters:
+            - name: RequestRateLimiter
+              args:
+                redis-rate-limiter.replenishRate: 200
+                redis-rate-limiter.burstCapacity: 400
+                redis-rate-limiter.requestedTokens: 1
+
+        # Product Service: /pc/** (placeholder for phase 2 expansion)
+        - id: product-service-route
+          uri: lb://product-service
+          predicates:
+            - Path=/pc/**
+
+        # Payment Service: /pay/** (placeholder)
+        - id: payment-service-route
+          uri: lb://payment-service
+          predicates:
+            - Path=/pay/**
+
+    # ─── Sentinel ─────────────────────────────────────────────────────────
+    sentinel:
+      transport:
+        dashboard: ${SENTINEL_DASHBOARD:localhost:8858}
+        port: 8719
+      eager: true
+
+  # ─── Redis (JWT blacklist + rate limiter) ─────────────────────────────
+  data:
+    redis:
+      host: ${REDIS_HOST:localhost}
+      port: ${REDIS_PORT:6379}
+      password: ${REDIS_PASSWORD:redis123}
+      lettuce:
+        pool:
+          max-active: 16
+          max-idle: 8
+          min-idle: 2
+
+# ─── Gateway JWT configuration ──────────────────────────────────────────
+iemodo:
+  gateway:
+    jwt:
+      # RSA public key for verifying tokens issued by user-service
+      # In production: load from Nacos/Vault. For dev, inline PEM or file path.
+      public-key-path: ${JWT_PUBLIC_KEY_PATH:classpath:jwt/public.pem}
+    # Paths that do NOT require a valid JWT
+    whitelist:
+      - POST:/uc/api/v1/auth/register
+      - POST:/uc/api/v1/auth/login
+      - POST:/uc/api/v1/auth/refresh
+      - GET:/uc/api/v1/auth/oauth2/**
+      - GET:/actuator/**
+      - GET:/health
+
+# ─── Actuator ───────────────────────────────────────────────────────────
+management:
+  endpoints:
+    web:
+      exposure:
+        include: health,info,metrics,gateway
+  endpoint:
+    health:
+      show-details: always
+
+# ─── Logging ─────────────────────────────────────────────────────────────
+logging:
+  level:
+    com.iemodo: DEBUG
+    org.springframework.cloud.gateway: INFO
+    com.alibaba.cloud.sentinel: INFO
