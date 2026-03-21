@@ -1,11 +1,10 @@
-version: '3.9'
-
 services:
   # ─────────────────────────────────────────────
-  # PostgreSQL 15
+  # PostgreSQL 15 (arm64-native image)
   # ─────────────────────────────────────────────
   postgres:
-    image: postgres:15-alpine
+    image: postgres:15
+    platform: linux/amd64
     container_name: iemodo-postgres
     restart: unless-stopped
     environment:
@@ -27,7 +26,8 @@ services:
   # Redis 7
   # ─────────────────────────────────────────────
   redis:
-    image: redis:7-alpine
+    image: redis:7
+    platform: linux/amd64
     container_name: iemodo-redis
     restart: unless-stopped
     command: redis-server --requirepass redis123 --maxmemory 512mb --maxmemory-policy allkeys-lru
@@ -46,6 +46,7 @@ services:
   # ─────────────────────────────────────────────
   nacos:
     image: nacos/nacos-server:v2.3.0
+    platform: linux/amd64
     container_name: iemodo-nacos
     restart: unless-stopped
     environment:
