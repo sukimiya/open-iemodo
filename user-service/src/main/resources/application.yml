@@ -1,0 +1,98 @@
+server:
+  port: 8081
+
+spring:
+  application:
+    name: user-service
+
+  config:
+    import: "nacos:user-service.yaml?group=IEMODO&refreshEnabled=true"
+
+  cloud:
+    nacos:
+      server-addr: ${NACOS_SERVER_ADDR:localhost:8848}
+      discovery:
+        group: IEMODO
+      config:
+        group: IEMODO
+        file-extension: yaml
+
+  # ─── R2DBC (multi-tenant routing via common module) ──────────────────────
+  # Actual per-tenant datasources are loaded from TenantProperties (Nacos)
+  # This block is a fallback for single-tenant local dev without Nacos
+  r2dbc:
+    url: r2dbc:postgresql://${DB_HOST:localhost}:${DB_PORT:5432}/${DB_NAME:iemodo}
+    username: ${DB_USERNAME:iemodo}
+    password: ${DB_PASSWORD:iemodo123}
+
+  # ─── Flyway (blocking, runs once at startup) ─────────────────────────────
+  flyway:
+    enabled: true
+    url: jdbc:postgresql://${DB_HOST:localhost}:${DB_PORT:5432}/${DB_NAME:iemodo}
+    user: ${DB_USERNAME:iemodo}
+    password: ${DB_PASSWORD:iemodo123}
+    schemas: schema_tenant_001,schema_tenant_002
+    locations: classpath:db/migration
+    baseline-on-migrate: true
+
+  # ─── Redis ───────────────────────────────────────────────────────────────
+  data:
+    redis:
+      host: ${REDIS_HOST:localhost}
+      port: ${REDIS_PORT:6379}
+      password: ${REDIS_PASSWORD:redis123}
+
+  # ─── Security (disable default form login — we use JWT) ──────────────────
+  security:
+    oauth2:
+      client:
+        registration:
+          google:
+            client-id: ${GOOGLE_CLIENT_ID:replace-with-real-client-id}
+            client-secret: ${GOOGLE_CLIENT_SECRET:replace-with-real-secret}
+            scope: openid,profile,email
+            redirect-uri: "{baseUrl}/uc/api/v1/auth/oauth2/callback/google"
+
+# ─── iemodo multi-tenant config (overridden by Nacos at runtime) ─────────
+iemodo:
+  tenants:
+    - id: tenant_001
+      type: SCHEMA
+      schema: schema_tenant_001
+      host: ${DB_HOST:localhost}
+      port: ${DB_PORT:5432}
+      database: ${DB_NAME:iemodo}
+      username: ${DB_USERNAME:iemodo}
+      password: ${DB_PASSWORD:iemodo123}
+    - id: tenant_002
+      type: SCHEMA
+      schema: schema_tenant_002
+      host: ${DB_HOST:localhost}
+      port: ${DB_PORT:5432}
+      database: ${DB_NAME:iemodo}
+      username: ${DB_USERNAME:iemodo}
+      password: ${DB_PASSWORD:iemodo123}
+  user:
+    jwt:
+      private-key-path: classpath:jwt/private.pem
+      public-key-path: classpath:jwt/public.pem
+      access-token-ttl-minutes: 60
+      refresh-token-ttl-days: 30
+      issuer: iemodo-user-service
+
+# ─── Actuator ────────────────────────────────────────────────────────────
+management:
+  endpoints:
+    web:
+      exposure:
+        include: health,info,metrics
+  endpoint:
+    health:
+      show-details: always
+
+# ─── Logging ─────────────────────────────────────────────────────────────
+logging:
+  level:
+    com.iemodo: DEBUG
+    org.springframework.security: INFO
+    org.flywaydb: INFO
