@@ -1,0 +1,72 @@
+version: '3.9'
+
+services:
+  # ─────────────────────────────────────────────
+  # PostgreSQL 15
+  # ─────────────────────────────────────────────
+  postgres:
+    image: postgres:15-alpine
+    container_name: iemodo-postgres
+    restart: unless-stopped
+    environment:
+      POSTGRES_DB: iemodo
+      POSTGRES_USER: iemodo
+      POSTGRES_PASSWORD: iemodo123
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+      - ./scripts/init-db.sql:/docker-entrypoint-initdb.d/init-db.sql
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U iemodo -d iemodo"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  # ─────────────────────────────────────────────
+  # Redis 7
+  # ─────────────────────────────────────────────
+  redis:
+    image: redis:7-alpine
+    container_name: iemodo-redis
+    restart: unless-stopped
+    command: redis-server --requirepass redis123 --maxmemory 512mb --maxmemory-policy allkeys-lru
+    ports:
+      - "6379:6379"
+    volumes:
+      - redis_data:/data
+    healthcheck:
+      test: ["CMD", "redis-cli", "-a", "redis123", "ping"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  # ─────────────────────────────────────────────
+  # Nacos 2.3 (standalone mode)
+  # ─────────────────────────────────────────────
+  nacos:
+    image: nacos/nacos-server:v2.3.0
+    container_name: iemodo-nacos
+    restart: unless-stopped
+    environment:
+      MODE: standalone
+      PREFER_HOST_MODE: hostname
+      NACOS_AUTH_ENABLE: "false"
+      JVM_XMS: 256m
+      JVM_XMX: 512m
+    ports:
+      - "8848:8848"   # HTTP
+      - "9848:9848"   # gRPC
+    volumes:
+      - nacos_data:/home/nacos/data
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8848/nacos/actuator/health"]
+      interval: 15s
+      timeout: 10s
+      retries: 10
+      start_period: 30s
+
+volumes:
+  postgres_data:
+  redis_data:
+  nacos_data:

@@ -1,0 +1,31 @@
+# Maven
+target/
+*.class
+*.jar
+*.war
+
+# IDE
+.idea/
+*.iml
+.vscode/
+.DS_Store
+
+# Eclipse
+.classpath
+.project
+.factorypath
+.settings/
+
+# Logs
+*.log
+logs/
+
+# Environment
+.env
+*.env.local
+
+# Spring Boot
+/spring-shell.log
+
+# Docker volumes (local)
+data/
