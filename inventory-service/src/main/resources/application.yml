@@ -1,0 +1,59 @@
+server:
+  port: 8084
+
+spring:
+  application:
+    name: inventory-service
+
+  # R2DBC for reactive database access
+  r2dbc:
+    url: r2dbc:postgresql://localhost:5432/iemodo
+    username: ${DB_USER:iemodo}
+    password: ${DB_PASS:iemodo}
+    pool:
+      max-size: 10
+      initial-size: 2
+
+  # Flyway for schema migrations
+  flyway:
+    url: jdbc:postgresql://localhost:5432/iemodo
+    user: ${DB_USER:iemodo}
+    password: ${DB_PASS:iemodo}
+    locations: classpath:db/migration
+    baseline-on-migrate: true
+
+  # Redis for cache
+  data:
+    redis:
+      host: ${REDIS_HOST:localhost}
+      port: ${REDIS_PORT:6379}
+      password: ${REDIS_PASSWORD:redis123}
+      lettuce:
+        pool:
+          max-active: 8
+          max-idle: 4
+
+# Custom properties
+iemodo:
+  inventory:
+    cache:
+      stock-ttl: 86400     # Stock cache TTL in seconds (24 hours)
+    allocation:
+      max-distance-km: 5000  # Maximum warehouse distance
+      default-preference: BALANCED
+
+# Logging
+logging:
+  level:
+    com.iemodo.inventory: INFO
+    org.springframework.data.r2dbc: WARN
+
+# Management endpoints
+management:
+  endpoints:
+    web:
+      exposure:
+        include: health,info,metrics
+  endpoint:
+    health:
+      show-details: always

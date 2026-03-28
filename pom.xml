@@ -19,6 +19,7 @@
         <module>tenant-management-service</module>
         <module>file-service</module>
         <module>product-service</module>
+        <module>inventory-service</module>
     </modules>
 
     <properties>
