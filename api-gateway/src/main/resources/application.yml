@@ -70,6 +70,15 @@ spring:
         port: 8719
       eager: true
 
+  # ─── R2DBC (dynamic routes + rate limits) ─────────────────────────────
+  r2dbc:
+    url: r2dbc:postgresql://localhost:5432/iemodo?schema=gateway_config
+    username: ${DB_USER:iemodo}
+    password: ${DB_PASS:iemodo}
+    pool:
+      max-size: 10
+      initial-size: 5
+
   # ─── Redis (JWT blacklist + rate limiter) ─────────────────────────────
   data:
     redis:
@@ -81,6 +90,15 @@ spring:
           max-active: 16
           max-idle: 8
           min-idle: 2
+
+  # ─── Flyway for schema management ─────────────────────────────────────
+  flyway:
+    url: jdbc:postgresql://localhost:5432/iemodo?currentSchema=gateway_config
+    user: ${DB_USER:iemodo}
+    password: ${DB_PASS:iemodo}
+    schemas: gateway_config
+    locations: classpath:db/migration
+    baseline-on-migrate: true
 
 # ─── Gateway JWT configuration ──────────────────────────────────────────
 iemodo:
