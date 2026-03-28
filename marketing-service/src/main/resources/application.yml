@@ -1,0 +1,55 @@
+server:
+  port: 8089
+
+spring:
+  application:
+    name: marketing-service
+
+  config:
+    import: "nacos:marketing-service.yaml?group=IEMODO&refreshEnabled=true"
+
+  cloud:
+    nacos:
+      server-addr: ${NACOS_SERVER_ADDR:localhost:8848}
+      discovery:
+        enabled: true
+        namespace: public
+        group: IEMODO
+      config:
+        enabled: true
+        namespace: public
+        group: IEMODO
+        file-extension: yaml
+
+  r2dbc:
+    url: r2dbc:postgresql://${DB_HOST:localhost}:${DB_PORT:5433}/${DB_NAME:iemodo}
+    username: ${DB_USER:iemodo}
+    password: ${DB_PASSWORD:iemodo123}
+    pool:
+      max-size: 10
+      initial-size: 2
+
+  flyway:
+    enabled: true
+    url: jdbc:postgresql://${DB_HOST:localhost}:${DB_PORT:5433}/${DB_NAME:iemodo}
+    user: ${DB_USER:iemodo}
+    password: ${DB_PASSWORD:iemodo123}
+    schemas: marketing_tenant_001,marketing_tenant_002
+    locations: classpath:db/migration
+    baseline-on-migrate: true
+
+# Logging
+logging:
+  level:
+    com.iemodo.marketing: DEBUG
+    org.springframework.data.r2dbc: WARN
+
+# Management
+management:
+  endpoints:
+    web:
+      exposure:
+        include: health,info,metrics
+  endpoint:
+    health:
+      show-details: always

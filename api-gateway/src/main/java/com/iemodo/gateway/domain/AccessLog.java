@@ -1,10 +1,11 @@
 package com.iemodo.gateway.domain;
 
+import com.iemodo.common.entity.BaseEntity;
 import lombok.AllArgsConstructor;
-import lombok.Builder;
 import lombok.Data;
+import lombok.EqualsAndHashCode;
 import lombok.NoArgsConstructor;
-import org.springframework.data.annotation.Id;
+import lombok.experimental.SuperBuilder;
 import org.springframework.data.relational.core.mapping.Table;
 
 import java.time.Instant;
@@ -16,14 +17,14 @@ import java.time.Instant;
  * Records all requests passing through the gateway for monitoring and analysis.
  */
 @Data
-@Builder
+@SuperBuilder
 @NoArgsConstructor
 @AllArgsConstructor
+@EqualsAndHashCode(callSuper = true)
 @Table("gateway_access_logs")
-public class AccessLog {
+public class AccessLog extends BaseEntity {
 
-    @Id
-    private Long id;
+    // id is inherited from BaseEntity
 
     /** Unique request ID */
     private String requestId;
@@ -73,13 +74,4 @@ public class AccessLog {
     /** Target URI */
     private String targetUri;
 
-    /** Log timestamp */
-    private Instant createdAt;
-
-    // ─── Convenience factory method ────────────────────────────────────────
-
-    public static AccessLogBuilder builder() {
-        return new AccessLogBuilder()
-                .createdAt(Instant.now());
-    }
 }

@@ -5,15 +5,31 @@ spring:
   application:
     name: tenant-management-service
 
+  config:
+    import: "nacos:tenant-management.yaml?group=IEMODO&refreshEnabled=true"
+
+  cloud:
+    nacos:
+      server-addr: ${NACOS_SERVER_ADDR:localhost:8848}
+      discovery:
+        enabled: true
+        namespace: public
+        group: IEMODO
+      config:
+        enabled: true
+        namespace: public
+        group: IEMODO
+        file-extension: yaml
+
   # R2DBC for reactive database access
   r2dbc:
-    url: r2dbc:postgresql://localhost:5432/iemodo?schema=tenant_meta
+    url: r2dbc:postgresql://localhost:5433/iemodo?schema=tenant_meta
     username: ${DB_USER:iemodo}
     password: ${DB_PASS:iemodo}
 
   # Flyway for schema migrations (uses JDBC, not R2DBC)
   flyway:
-    url: jdbc:postgresql://localhost:5432/iemodo?currentSchema=tenant_meta
+    url: jdbc:postgresql://localhost:5433/iemodo?currentSchema=tenant_meta
     user: ${DB_USER:iemodo}
     password: ${DB_PASS:iemodo}
     schemas: tenant_meta

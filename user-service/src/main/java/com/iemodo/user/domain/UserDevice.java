@@ -1,11 +1,11 @@
 package com.iemodo.user.domain;
 
+import com.iemodo.common.entity.BaseEntity;
 import lombok.AllArgsConstructor;
-import lombok.Builder;
 import lombok.Data;
+import lombok.EqualsAndHashCode;
 import lombok.NoArgsConstructor;
-import org.springframework.data.annotation.CreatedDate;
-import org.springframework.data.annotation.Id;
+import lombok.experimental.SuperBuilder;
 import org.springframework.data.relational.core.mapping.Table;
 
 import java.time.Instant;
@@ -17,14 +17,13 @@ import java.time.Instant;
  * and revoke individual devices (e.g. "log out of phone").
  */
 @Data
-@Builder
+@SuperBuilder
 @NoArgsConstructor
 @AllArgsConstructor
+@EqualsAndHashCode(callSuper = true)
 @Table("user_devices")
-public class UserDevice {
-
-    @Id
-    private Long id;
+public class UserDevice extends BaseEntity {
+    // id is inherited from BaseEntity
 
     private Long userId;
 
@@ -45,9 +44,6 @@ public class UserDevice {
 
     /** Last time this device was seen (updated on each successful auth). */
     private Instant lastSeenAt;
-
-    @CreatedDate
-    private Instant createdAt;
 
     /** Whether this device session has been explicitly revoked by the user. */
     private boolean revoked;

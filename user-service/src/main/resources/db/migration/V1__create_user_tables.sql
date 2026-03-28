@@ -5,7 +5,7 @@
 
 -- ─── users ──────────────────────────────────────────────────────────────────
 CREATE TABLE IF NOT EXISTS users (
-    id                  BIGSERIAL       PRIMARY KEY,
+    id                  BIGINT          PRIMARY KEY,    -- Snowflake ID
     tenant_id           VARCHAR(50)     NOT NULL,       -- Platform-level tenant identifier
     email               VARCHAR(255)    NOT NULL,
     password_hash       VARCHAR(255),                   -- NULL for OAuth2-only users
@@ -13,7 +13,7 @@ CREATE TABLE IF NOT EXISTS users (
     -- Basic Profile
     display_name        VARCHAR(100),
     first_name          VARCHAR(100),
-    last_name           VARCHAR(100),
+    last_name          VARCHAR(100),
     phone               VARCHAR(30),
     avatar_url          VARCHAR(500),
     
@@ -21,8 +21,7 @@ CREATE TABLE IF NOT EXISTS users (
     oauth_provider      VARCHAR(50)     NOT NULL DEFAULT 'LOCAL',  -- LOCAL | GOOGLE | FACEBOOK | APPLE
     oauth_subject       VARCHAR(255),                   -- Provider's unique user ID
     
-    -- Status & Verification
-    status              VARCHAR(20)     NOT NULL DEFAULT 'ACTIVE', -- ACTIVE | DISABLED | DELETED
+    -- Verification
     email_verified      BOOLEAN         NOT NULL DEFAULT FALSE,
     phone_verified      BOOLEAN         NOT NULL DEFAULT FALSE,
     
@@ -35,9 +34,15 @@ CREATE TABLE IF NOT EXISTS users (
     total_orders        INTEGER         NOT NULL DEFAULT 0,
     total_spent         DECIMAL(15,2)   NOT NULL DEFAULT 0,
     
-    -- Timestamps
-    created_at          TIMESTAMPTZ     NOT NULL DEFAULT NOW(),
-    updated_at          TIMESTAMPTZ     NOT NULL DEFAULT NOW(),
+    -- Audit Fields (BaseEntity) - 所有子模块必须使用这些字段名
+    status              INTEGER         NOT NULL DEFAULT 1,         -- 1=ACTIVE, 0=DISABLED
+    create_by           BIGINT,                                     -- Creator user ID
+    create_time         TIMESTAMPTZ,                                -- Creation time (UTC)
+    update_by           BIGINT,                                     -- Updater user ID
+    update_time         TIMESTAMPTZ,                                -- Update time (UTC)
+    is_valid            INTEGER         NOT NULL DEFAULT 1,         -- 1=Valid, 0=Soft deleted
+    
+    -- Legacy field for backward compatibility
     deleted_at          TIMESTAMPTZ,
 
     CONSTRAINT users_email_unique UNIQUE (email)
@@ -51,14 +56,23 @@ CREATE INDEX IF NOT EXISTS idx_users_deleted_at    ON users (deleted_at) WHERE d
 
 -- ─── refresh_tokens ──────────────────────────────────────────────────────────
 CREATE TABLE IF NOT EXISTS refresh_tokens (
-    id          BIGSERIAL       PRIMARY KEY,
+    id          BIGINT          PRIMARY KEY,  -- Snowflake ID
     user_id     BIGINT          NOT NULL REFERENCES users(id) ON DELETE CASCADE,
     token_hash  VARCHAR(255)    NOT NULL,   -- SHA-256 hash of the raw token
     device_id   VARCHAR(100),               -- optional device fingerprint
     user_agent  VARCHAR(500),
     ip_address  VARCHAR(45),
     expires_at  TIMESTAMPTZ     NOT NULL,
-    created_at  TIMESTAMPTZ     NOT NULL DEFAULT NOW(),
+    
+    -- Audit Fields (BaseEntity)
+    status      INTEGER         NOT NULL DEFAULT 1,
+    create_by   BIGINT,
+    create_time TIMESTAMPTZ,    -- UTC timestamp, set by BaseEntityBeforeSaveCallback
+    update_by   BIGINT,
+    update_time TIMESTAMPTZ,    -- UTC timestamp, set by BaseEntityBeforeSaveCallback
+    is_valid    INTEGER         NOT NULL DEFAULT 1,
+    
+    -- Legacy fields
     revoked     BOOLEAN         NOT NULL DEFAULT FALSE,
 
     CONSTRAINT refresh_tokens_hash_unique UNIQUE (token_hash)
@@ -69,7 +83,7 @@ CREATE INDEX IF NOT EXISTS idx_refresh_tokens_expires_at ON refresh_tokens (expi
 
 -- ─── user_addresses ──────────────────────────────────────────────────────────
 CREATE TABLE IF NOT EXISTS user_addresses (
-    id                  BIGSERIAL       PRIMARY KEY,
+    id                  BIGINT          PRIMARY KEY,  -- Snowflake ID
     customer_id         BIGINT          NOT NULL REFERENCES users(id) ON DELETE CASCADE,
     
     -- Address Metadata
@@ -98,9 +112,13 @@ CREATE TABLE IF NOT EXISTS user_addresses (
     is_default          BOOLEAN         NOT NULL DEFAULT FALSE,
     is_default_billing  BOOLEAN         NOT NULL DEFAULT FALSE,
     
-    -- Timestamps
-    created_at          TIMESTAMPTZ     NOT NULL DEFAULT NOW(),
-    updated_at          TIMESTAMPTZ     NOT NULL DEFAULT NOW()
+    -- Audit Fields (BaseEntity)
+    status              INTEGER         NOT NULL DEFAULT 1,
+    create_by           BIGINT,
+    create_time         TIMESTAMPTZ,    -- UTC timestamp
+    update_by           BIGINT,
+    update_time         TIMESTAMPTZ,    -- UTC timestamp
+    is_valid            INTEGER         NOT NULL DEFAULT 1
 );
 
 CREATE INDEX IF NOT EXISTS idx_user_addresses_customer_id ON user_addresses (customer_id);
@@ -109,7 +127,7 @@ CREATE INDEX IF NOT EXISTS idx_user_addresses_geo_hash    ON user_addresses (geo
 
 -- ─── user_devices ────────────────────────────────────────────────────────────
 CREATE TABLE IF NOT EXISTS user_devices (
-    id              BIGSERIAL       PRIMARY KEY,
+    id              BIGINT          PRIMARY KEY,  -- Snowflake ID
     user_id         BIGINT          NOT NULL REFERENCES users(id) ON DELETE CASCADE,
     device_id       VARCHAR(100)    NOT NULL,           -- Device identifier
     device_type     VARCHAR(50),                        -- MOBILE | WEB | TABLET
@@ -118,7 +136,16 @@ CREATE TABLE IF NOT EXISTS user_devices (
     ip_address      VARCHAR(45),
     last_seen_at    TIMESTAMPTZ     NOT NULL DEFAULT NOW(),
     last_location   VARCHAR(200),                       -- Geographic location
-    created_at      TIMESTAMPTZ     NOT NULL DEFAULT NOW(),
+    
+    -- Audit Fields (BaseEntity)
+    status          INTEGER         NOT NULL DEFAULT 1,
+    create_by       BIGINT,
+    create_time     TIMESTAMPTZ     NOT NULL DEFAULT NOW(),
+    update_by       BIGINT,
+    update_time     TIMESTAMPTZ     NOT NULL DEFAULT NOW(),
+    is_valid        INTEGER         NOT NULL DEFAULT 1,
+    
+    -- Legacy fields
     revoked         BOOLEAN         NOT NULL DEFAULT FALSE,
 
     CONSTRAINT user_devices_unique UNIQUE (user_id, device_id)
@@ -129,7 +156,7 @@ CREATE INDEX IF NOT EXISTS idx_user_devices_device_id  ON user_devices (device_i
 
 -- ─── oauth_connections ───────────────────────────────────────────────────────
 CREATE TABLE IF NOT EXISTS oauth_connections (
-    id                  BIGSERIAL       PRIMARY KEY,
+    id                  BIGINT          PRIMARY KEY,  -- Snowflake ID
     user_id             BIGINT          NOT NULL REFERENCES users(id) ON DELETE CASCADE,
     provider            VARCHAR(50)     NOT NULL,       -- GOOGLE | FACEBOOK | APPLE
     provider_subject    VARCHAR(255)    NOT NULL,       -- Third-party user ID
@@ -137,7 +164,14 @@ CREATE TABLE IF NOT EXISTS oauth_connections (
     access_token        TEXT,
     refresh_token       TEXT,
     token_expires_at    TIMESTAMPTZ,
-    created_at          TIMESTAMPTZ     NOT NULL DEFAULT NOW(),
+    
+    -- Audit Fields (BaseEntity)
+    status              INTEGER         NOT NULL DEFAULT 1,
+    create_by           BIGINT,
+    create_time         TIMESTAMPTZ,    -- UTC timestamp
+    update_by           BIGINT,
+    update_time         TIMESTAMPTZ,    -- UTC timestamp
+    is_valid            INTEGER         NOT NULL DEFAULT 1,
 
     CONSTRAINT oauth_connections_unique UNIQUE (provider, provider_subject)
 );

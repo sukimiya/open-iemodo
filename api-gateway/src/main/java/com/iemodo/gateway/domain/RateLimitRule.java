@@ -1,15 +1,12 @@
 package com.iemodo.gateway.domain;
 
+import com.iemodo.common.entity.BaseEntity;
 import lombok.AllArgsConstructor;
-import lombok.Builder;
 import lombok.Data;
+import lombok.EqualsAndHashCode;
 import lombok.NoArgsConstructor;
-import org.springframework.data.annotation.CreatedDate;
-import org.springframework.data.annotation.Id;
-import org.springframework.data.annotation.LastModifiedDate;
+import lombok.experimental.SuperBuilder;
 import org.springframework.data.relational.core.mapping.Table;
-
-import java.time.Instant;
 
 /**
  * Rate limit rule entity.
@@ -18,14 +15,14 @@ import java.time.Instant;
  * Defines rate limiting policies using Redis + Lua script.
  */
 @Data
-@Builder
+@SuperBuilder
 @NoArgsConstructor
 @AllArgsConstructor
+@EqualsAndHashCode(callSuper = true)
 @Table("rate_limit_rules")
-public class RateLimitRule {
+public class RateLimitRule extends BaseEntity {
 
-    @Id
-    private Long id;
+    // id is inherited from BaseEntity
 
     /** Rule identifier (e.g., "default-public") */
     private String ruleName;
@@ -56,12 +53,6 @@ public class RateLimitRule {
 
     /** Description of this rule */
     private String description;
-
-    @CreatedDate
-    private Instant createdAt;
-
-    @LastModifiedDate
-    private Instant updatedAt;
 
     // ─── Domain helpers ────────────────────────────────────────────────────
 

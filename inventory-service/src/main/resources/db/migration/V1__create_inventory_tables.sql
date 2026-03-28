@@ -5,7 +5,7 @@
 
 -- ─── warehouses ──────────────────────────────────────────────────────────────
 CREATE TABLE IF NOT EXISTS warehouses (
-    id                  BIGSERIAL       PRIMARY KEY,
+    id                  BIGINT          PRIMARY KEY,  -- Snowflake ID
     warehouse_code      VARCHAR(50)     NOT NULL UNIQUE,
     name                VARCHAR(200)    NOT NULL,
     name_localized      JSONB,
@@ -30,25 +30,30 @@ CREATE TABLE IF NOT EXISTS warehouses (
     avg_process_hours   INTEGER         DEFAULT 24,          -- Average processing time
     
     -- Status
-    is_active           BOOLEAN         NOT NULL DEFAULT TRUE,
+    warehouse_active    BOOLEAN         NOT NULL DEFAULT TRUE,
     is_default          BOOLEAN         DEFAULT FALSE,
     
     -- Capacity
     max_daily_orders    INTEGER,
     current_daily_orders INTEGER        DEFAULT 0,
     
-    created_at          TIMESTAMPTZ     NOT NULL DEFAULT NOW(),
-    updated_at          TIMESTAMPTZ     NOT NULL DEFAULT NOW()
+    -- BaseEntity audit fields
+    status              INTEGER         NOT NULL DEFAULT 1,
+    create_by           BIGINT,
+    create_time         TIMESTAMPTZ,
+    update_by           BIGINT,
+    update_time         TIMESTAMPTZ,
+    is_valid            INTEGER         NOT NULL DEFAULT 1
 );
 
 CREATE INDEX IF NOT EXISTS idx_warehouses_country ON warehouses (country_code);
-CREATE INDEX IF NOT EXISTS idx_warehouses_active ON warehouses (is_active);
+CREATE INDEX IF NOT EXISTS idx_warehouses_active ON warehouses (warehouse_active);
 CREATE INDEX IF NOT EXISTS idx_warehouses_location ON warehouses (latitude, longitude) 
     WHERE latitude IS NOT NULL AND longitude IS NOT NULL;
 
 -- ─── inventory ───────────────────────────────────────────────────────────────
 CREATE TABLE IF NOT EXISTS inventory (
-    id                  BIGSERIAL       PRIMARY KEY,
+    id                  BIGINT          PRIMARY KEY,  -- Snowflake ID
     warehouse_id        BIGINT          NOT NULL REFERENCES warehouses(id),
     sku_id              BIGINT          NOT NULL,
     
@@ -74,8 +79,13 @@ CREATE TABLE IF NOT EXISTS inventory (
     last_stock_in_at    TIMESTAMPTZ,
     last_stock_out_at   TIMESTAMPTZ,
     
-    created_at          TIMESTAMPTZ     NOT NULL DEFAULT NOW(),
-    updated_at          TIMESTAMPTZ     NOT NULL DEFAULT NOW(),
+    -- BaseEntity audit fields
+    status              INTEGER         NOT NULL DEFAULT 1,
+    create_by           BIGINT,
+    create_time         TIMESTAMPTZ,
+    update_by           BIGINT,
+    update_time         TIMESTAMPTZ,
+    is_valid            INTEGER         NOT NULL DEFAULT 1,
     
     UNIQUE(warehouse_id, sku_id)
 );
@@ -87,7 +97,7 @@ CREATE INDEX IF NOT EXISTS idx_inventory_low_stock ON inventory (sku_id, availab
 
 -- ─── inventory_transactions ──────────────────────────────────────────────────
 CREATE TABLE IF NOT EXISTS inventory_transactions (
-    id                  BIGSERIAL       PRIMARY KEY,
+    id                  BIGINT          PRIMARY KEY,  -- Snowflake ID
     warehouse_id        BIGINT          NOT NULL REFERENCES warehouses(id),
     sku_id              BIGINT          NOT NULL,
     
@@ -109,20 +119,24 @@ CREATE TABLE IF NOT EXISTS inventory_transactions (
     reason              VARCHAR(200),
     notes               TEXT,
     
-    -- Operator
-    created_by          BIGINT,
-    created_at          TIMESTAMPTZ     NOT NULL DEFAULT NOW()
+    -- BaseEntity audit fields
+    status              INTEGER         NOT NULL DEFAULT 1,
+    create_by           BIGINT,
+    create_time         TIMESTAMPTZ,
+    update_by           BIGINT,
+    update_time         TIMESTAMPTZ,
+    is_valid            INTEGER         NOT NULL DEFAULT 1
 );
 
 CREATE INDEX IF NOT EXISTS idx_transactions_warehouse ON inventory_transactions (warehouse_id);
 CREATE INDEX IF NOT EXISTS idx_transactions_sku ON inventory_transactions (sku_id);
 CREATE INDEX IF NOT EXISTS idx_transactions_type ON inventory_transactions (transaction_type);
 CREATE INDEX IF NOT EXISTS idx_transactions_reference ON inventory_transactions (reference_no);
-CREATE INDEX IF NOT EXISTS idx_transactions_created ON inventory_transactions (created_at);
+CREATE INDEX IF NOT EXISTS idx_transactions_create_time ON inventory_transactions (create_time);
 
 -- ─── stock_transfers ─────────────────────────────────────────────────────────
 CREATE TABLE IF NOT EXISTS stock_transfers (
-    id                  BIGSERIAL       PRIMARY KEY,
+    id                  BIGINT          PRIMARY KEY,  -- Snowflake ID
     transfer_no         VARCHAR(100)    NOT NULL UNIQUE,
     
     -- Source and destination
@@ -130,7 +144,7 @@ CREATE TABLE IF NOT EXISTS stock_transfers (
     to_warehouse_id     BIGINT          NOT NULL REFERENCES warehouses(id),
     
     -- Status: PENDING, APPROVED, SHIPPED, RECEIVED, CANCELLED
-    status              VARCHAR(20)     NOT NULL DEFAULT 'PENDING',
+    transfer_status     VARCHAR(20)     NOT NULL DEFAULT 'PENDING',
     
     -- Costs
     shipping_cost       DECIMAL(15,2),
@@ -149,18 +163,22 @@ CREATE TABLE IF NOT EXISTS stock_transfers (
     -- Notes
     notes               TEXT,
     
-    created_by          BIGINT,
-    created_at          TIMESTAMPTZ     NOT NULL DEFAULT NOW(),
-    updated_at          TIMESTAMPTZ     NOT NULL DEFAULT NOW()
+    -- BaseEntity audit fields
+    status              INTEGER         NOT NULL DEFAULT 1,
+    create_by           BIGINT,
+    create_time         TIMESTAMPTZ,
+    update_by           BIGINT,
+    update_time         TIMESTAMPTZ,
+    is_valid            INTEGER         NOT NULL DEFAULT 1
 );
 
 CREATE INDEX IF NOT EXISTS idx_transfers_from ON stock_transfers (from_warehouse_id);
 CREATE INDEX IF NOT EXISTS idx_transfers_to ON stock_transfers (to_warehouse_id);
-CREATE INDEX IF NOT EXISTS idx_transfers_status ON stock_transfers (status);
+CREATE INDEX IF NOT EXISTS idx_transfers_status ON stock_transfers (transfer_status);
 
 -- ─── stock_transfer_items ────────────────────────────────────────────────────
 CREATE TABLE IF NOT EXISTS stock_transfer_items (
-    id                  BIGSERIAL       PRIMARY KEY,
+    id                  BIGINT          PRIMARY KEY,  -- Snowflake ID
     transfer_id         BIGINT          NOT NULL REFERENCES stock_transfers(id) ON DELETE CASCADE,
     sku_id              BIGINT          NOT NULL,
     
@@ -170,9 +188,17 @@ CREATE TABLE IF NOT EXISTS stock_transfer_items (
     received_qty        INTEGER,
     
     -- Status per item
-    status              VARCHAR(20)     NOT NULL DEFAULT 'PENDING',
+    item_status         VARCHAR(20)     NOT NULL DEFAULT 'PENDING',
     
-    notes               TEXT
+    notes               TEXT,
+    
+    -- BaseEntity audit fields
+    status              INTEGER         NOT NULL DEFAULT 1,
+    create_by           BIGINT,
+    create_time         TIMESTAMPTZ,
+    update_by           BIGINT,
+    update_time         TIMESTAMPTZ,
+    is_valid            INTEGER         NOT NULL DEFAULT 1
 );
 
 CREATE INDEX IF NOT EXISTS idx_transfer_items_transfer ON stock_transfer_items (transfer_id);
@@ -180,7 +206,7 @@ CREATE INDEX IF NOT EXISTS idx_transfer_items_sku ON stock_transfer_items (sku_i
 
 -- ─── restock_recommendations ─────────────────────────────────────────────────
 CREATE TABLE IF NOT EXISTS restock_recommendations (
-    id                  BIGSERIAL       PRIMARY KEY,
+    id                  BIGINT          PRIMARY KEY,  -- Snowflake ID
     warehouse_id        BIGINT          NOT NULL REFERENCES warehouses(id),
     sku_id              BIGINT          NOT NULL,
     
@@ -192,27 +218,34 @@ CREATE TABLE IF NOT EXISTS restock_recommendations (
     current_stock       INTEGER         NOT NULL,
     avg_daily_sales     DECIMAL(10,2),
     suggested_qty       INTEGER         NOT NULL,
-    priority            VARCHAR(20)     DEFAULT 'MEDIUM',    -- HIGH, MEDIUM, LOW
+    recommendation_priority VARCHAR(20) DEFAULT 'MEDIUM',    -- HIGH, MEDIUM, LOW
     
     -- Source warehouse for transfer
     source_warehouse_id BIGINT          REFERENCES warehouses(id),
     estimated_cost      DECIMAL(15,2),
     
     -- Status: PENDING, APPROVED, REJECTED, EXECUTED
-    status              VARCHAR(20)     DEFAULT 'PENDING',
+    recommendation_status VARCHAR(20)   DEFAULT 'PENDING',
     
-    created_at          TIMESTAMPTZ     NOT NULL DEFAULT NOW(),
-    expires_at          TIMESTAMPTZ
+    expires_at          TIMESTAMPTZ,
+    
+    -- BaseEntity audit fields
+    status              INTEGER         NOT NULL DEFAULT 1,
+    create_by           BIGINT,
+    create_time         TIMESTAMPTZ,
+    update_by           BIGINT,
+    update_time         TIMESTAMPTZ,
+    is_valid            INTEGER         NOT NULL DEFAULT 1
 );
 
 CREATE INDEX IF NOT EXISTS idx_restock_warehouse ON restock_recommendations (warehouse_id);
 CREATE INDEX IF NOT EXISTS idx_restock_sku ON restock_recommendations (sku_id);
-CREATE INDEX IF NOT EXISTS idx_restock_status ON restock_recommendations (status);
+CREATE INDEX IF NOT EXISTS idx_restock_status ON restock_recommendations (recommendation_status);
 
 -- ─── Seed data ───────────────────────────────────────────────────────────────
-INSERT INTO warehouses (warehouse_code, name, name_localized, country_code, city, warehouse_type, is_active, is_default) VALUES
-    ('WH-US-NYC', 'New York Warehouse', '{"en": "New York Warehouse"}', 'US', 'New York', 'STANDARD', TRUE, TRUE),
-    ('WH-US-LAX', 'Los Angeles Warehouse', '{"en": "Los Angeles Warehouse"}', 'US', 'Los Angeles', 'EXPRESS', TRUE, FALSE),
-    ('WH-CN-SHA', 'Shanghai Warehouse', '{"en": "Shanghai Warehouse", "zh": "上海仓库"}', 'CN', 'Shanghai', 'STANDARD', TRUE, FALSE),
-    ('WH-EU-GER', 'Germany Warehouse', '{"en": "Germany Warehouse"}', 'DE', 'Berlin', 'STANDARD', TRUE, FALSE)
+INSERT INTO warehouses (id, warehouse_code, name, name_localized, country_code, city, warehouse_type, warehouse_active, is_default) VALUES
+    (100001, 'WH-US-NYC', 'New York Warehouse', '{"en": "New York Warehouse"}', 'US', 'New York', 'STANDARD', TRUE, TRUE),
+    (100002, 'WH-US-LAX', 'Los Angeles Warehouse', '{"en": "Los Angeles Warehouse"}', 'US', 'Los Angeles', 'EXPRESS', TRUE, FALSE),
+    (100003, 'WH-CN-SHA', 'Shanghai Warehouse', '{"en": "Shanghai Warehouse", "zh": "上海仓库"}', 'CN', 'Shanghai', 'STANDARD', TRUE, FALSE),
+    (100004, 'WH-EU-GER', 'Germany Warehouse', '{"en": "Germany Warehouse"}', 'DE', 'Berlin', 'STANDARD', TRUE, FALSE)
 ON CONFLICT (warehouse_code) DO NOTHING;

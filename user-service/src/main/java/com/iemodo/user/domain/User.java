@@ -1,12 +1,10 @@
 package com.iemodo.user.domain;
 
-import lombok.AllArgsConstructor;
-import lombok.Builder;
+import com.iemodo.common.entity.BaseEntity;
 import lombok.Data;
+import lombok.EqualsAndHashCode;
 import lombok.NoArgsConstructor;
-import org.springframework.data.annotation.CreatedDate;
-import org.springframework.data.annotation.Id;
-import org.springframework.data.annotation.LastModifiedDate;
+import lombok.experimental.SuperBuilder;
 import org.springframework.data.relational.core.mapping.Table;
 
 import java.math.BigDecimal;
@@ -17,17 +15,17 @@ import java.time.Instant;
  * in the current tenant's Schema (routed by
  * {@link com.iemodo.common.tenant.PostgresTenantConnectionFactory}).
  * 
+ * <p>Extends {@link BaseEntity} for automatic auditing fields:
+ * id, status, createBy, createTime, updateBy, updateTime, isValid.
+ * 
  * <p>Platform-level table containing tenant_id for cross-schema routing during login.
  */
 @Data
-@Builder
+@SuperBuilder
 @NoArgsConstructor
-@AllArgsConstructor
+@EqualsAndHashCode(callSuper = true)
 @Table("users")
-public class User {
-
-    @Id
-    private Long id;
+public class User extends BaseEntity {
 
     /** Platform-level tenant identifier for cross-schema routing */
     private String tenantId;
@@ -53,10 +51,7 @@ public class User {
     /** Provider's unique subject identifier (e.g. Google sub). */
     private String oauthSubject;
 
-    // ─── Status & Verification ─────────────────────────────────────────────
-
-    /** ACTIVE | DISABLED | DELETED */
-    private String status;
+    // ─── Verification ──────────────────────────────────────────────────────
 
     private Boolean emailVerified;
     private Boolean phoneVerified;
@@ -72,13 +67,7 @@ public class User {
     private Integer totalOrders;
     private BigDecimal totalSpent;
 
-    // ─── Timestamps ────────────────────────────────────────────────────────
-
-    @CreatedDate
-    private Instant createdAt;
-
-    @LastModifiedDate
-    private Instant updatedAt;
+    // ─── Legacy Soft Delete Timestamp (kept for backward compatibility) ─────
 
     private Instant deletedAt;
 
@@ -88,12 +77,19 @@ public class User {
         return "LOCAL".equals(oauthProvider);
     }
 
+    /**
+     * Check if user is active (status=1 from BaseEntity and not deleted)
+     */
     public boolean isActive() {
-        return "ACTIVE".equals(status);
+        return getStatus() != null && getStatus() == 1 && (deletedAt == null);
     }
 
+    /**
+     * Soft delete - marks user as invalid and sets deleted timestamp
+     */
     public void softDelete() {
-        this.status = "DELETED";
+        setStatus(0); // Disabled
+        setIsValid(0); // Invalid/Deleted
         this.deletedAt = Instant.now();
     }
 
@@ -102,5 +98,21 @@ public class User {
             return firstName + " " + lastName;
         }
         return displayName;
+    }
+
+    // ─── Compatibility methods for existing code ───────────────────────────
+
+    /**
+     * 兼容方法：获取创建时间（返回 BaseEntity 的 createTime）
+     */
+    public Instant getCreatedAt() {
+        return getCreateTime();
+    }
+
+    /**
+     * 兼容方法：获取更新时间（返回 BaseEntity 的 updateTime）
+     */
+    public Instant getUpdatedAt() {
+        return getUpdateTime();
     }
 }

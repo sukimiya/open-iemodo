@@ -1,14 +1,13 @@
 package com.iemodo.order.domain;
 
+import com.iemodo.common.entity.BaseEntity;
 import com.iemodo.common.exception.BusinessException;
 import com.iemodo.common.exception.ErrorCode;
 import lombok.AllArgsConstructor;
-import lombok.Builder;
 import lombok.Data;
+import lombok.EqualsAndHashCode;
 import lombok.NoArgsConstructor;
-import org.springframework.data.annotation.CreatedDate;
-import org.springframework.data.annotation.Id;
-import org.springframework.data.annotation.LastModifiedDate;
+import lombok.experimental.SuperBuilder;
 import org.springframework.data.annotation.Transient;
 import org.springframework.data.relational.core.mapping.Table;
 import org.springframework.http.HttpStatus;
@@ -26,14 +25,14 @@ import java.util.List;
  * (R2DBC does not support nested collections natively).
  */
 @Data
-@Builder
+@SuperBuilder
 @NoArgsConstructor
 @AllArgsConstructor
+@EqualsAndHashCode(callSuper = true)
 @Table("orders")
-public class Order {
+public class Order extends BaseEntity {
 
-    @Id
-    private Long id;
+    // id is inherited from BaseEntity
 
     private String orderNo;
 
@@ -42,7 +41,8 @@ public class Order {
 
     private Long customerId;
 
-    private OrderStatus status;
+    /** Order status (PENDING_PAYMENT, PAID, SHIPPED, etc.) - renamed to avoid conflict with BaseEntity.status */
+    private OrderStatus orderStatus;
 
     private BigDecimal totalAmount;
 
@@ -52,12 +52,6 @@ public class Order {
     private String shippingName;
     private String shippingPhone;
     private String shippingAddr;
-
-    @CreatedDate
-    private Instant createdAt;
-
-    @LastModifiedDate
-    private Instant updatedAt;
 
     /** Loaded separately after the order row is fetched — not persisted here. */
     @Transient
@@ -71,19 +65,29 @@ public class Order {
      * @throws BusinessException if the transition is not allowed
      */
     public void transitionTo(OrderStatus next) {
-        if (!this.status.canTransitionTo(next)) {
+        if (!this.orderStatus.canTransitionTo(next)) {
             throw new BusinessException(
                     ErrorCode.INVALID_ORDER_STATUS, HttpStatus.UNPROCESSABLE_ENTITY,
-                    String.format("Cannot transition from %s to %s", this.status, next));
+                    String.format("Cannot transition from %s to %s", this.orderStatus, next));
         }
-        this.status = next;
+        this.orderStatus = next;
     }
 
     public boolean isPendingPayment() {
-        return OrderStatus.PENDING_PAYMENT == status;
+        return OrderStatus.PENDING_PAYMENT == orderStatus;
     }
 
     public boolean isCancellable() {
-        return status.canTransitionTo(OrderStatus.CANCELLED);
+        return orderStatus.canTransitionTo(OrderStatus.CANCELLED);
+    }
+
+    // ─── Compatibility methods for BaseEntity audit fields ─────────────────
+
+    public Instant getCreatedAt() {
+        return getCreateTime();
+    }
+
+    public Instant getUpdatedAt() {
+        return getUpdateTime();
     }
 }

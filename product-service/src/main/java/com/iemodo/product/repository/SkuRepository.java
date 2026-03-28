@@ -13,18 +13,18 @@ import reactor.core.publisher.Mono;
 @Repository
 public interface SkuRepository extends ReactiveCrudRepository<Sku, Long> {
 
-    Flux<Sku> findAllByProductIdAndDeletedAtIsNull(Long productId);
+    Flux<Sku> findAllByProductIdAndIsValid(Long productId);
 
     Mono<Sku> findBySkuCode(String skuCode);
 
-    Mono<Sku> findByIdAndDeletedAtIsNull(Long id);
+    Mono<Sku> findByIdAndIsValid(Long id);
 
     Mono<Boolean> existsBySkuCode(String skuCode);
 
-    Mono<Boolean> existsByProductIdAndAttributeHashAndDeletedAtIsNull(Long productId, String attributeHash);
+    Mono<Boolean> existsByProductIdAndAttributeHashAndIsValid(Long productId, String attributeHash);
 
-    @Query("SELECT * FROM skus WHERE product_id = :productId AND status = 'ACTIVE' " +
-           "AND stock_quantity > 0 AND deleted_at IS NULL")
+    @Query("SELECT * FROM skus WHERE product_id = :productId AND sku_status = 'ACTIVE' " +
+           "AND stock_quantity > 0 AND is_valid = 1")
     Flux<Sku> findAvailableByProductId(Long productId);
 
     @Query("UPDATE skus SET stock_quantity = stock_quantity - :quantity, " +

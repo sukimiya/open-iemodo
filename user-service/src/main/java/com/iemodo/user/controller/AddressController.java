@@ -31,7 +31,8 @@ public class AddressController {
      */
     @GetMapping
     public Flux<Response<AddressDTO>> getMyAddresses(
-            @RequestHeader("Authorization") String authHeader) {
+            @RequestHeader("Authorization") String authHeader,
+            @RequestHeader("X-TenantID") String tenantId) {
         Long userId = extractUserId(authHeader);
         return addressService.getUserAddresses(userId)
                 .map(Response::success);
@@ -42,7 +43,8 @@ public class AddressController {
      */
     @GetMapping("/default")
     public Mono<Response<AddressDTO>> getDefaultAddress(
-            @RequestHeader("Authorization") String authHeader) {
+            @RequestHeader("Authorization") String authHeader,
+            @RequestHeader("X-TenantID") String tenantId) {
         Long userId = extractUserId(authHeader);
         return addressService.getDefaultAddress(userId)
                 .map(Response::success);
@@ -54,6 +56,7 @@ public class AddressController {
     @GetMapping("/{addressId}")
     public Mono<Response<AddressDTO>> getAddress(
             @RequestHeader("Authorization") String authHeader,
+            @RequestHeader("X-TenantID") String tenantId,
             @PathVariable Long addressId) {
         Long userId = extractUserId(authHeader);
         return addressService.getAddress(userId, addressId)
@@ -66,6 +69,7 @@ public class AddressController {
     @PostMapping
     public Mono<Response<AddressDTO>> createAddress(
             @RequestHeader("Authorization") String authHeader,
+            @RequestHeader("X-TenantID") String tenantId,
             @Valid @RequestBody CreateAddressRequest request) {
         Long userId = extractUserId(authHeader);
         return addressService.createAddress(userId, request)
@@ -78,6 +82,7 @@ public class AddressController {
     @DeleteMapping("/{addressId}")
     public Mono<Response<Void>> deleteAddress(
             @RequestHeader("Authorization") String authHeader,
+            @RequestHeader("X-TenantID") String tenantId,
             @PathVariable Long addressId) {
         Long userId = extractUserId(authHeader);
         return addressService.deleteAddress(userId, addressId)
@@ -90,6 +95,7 @@ public class AddressController {
     @PutMapping("/{addressId}/default")
     public Mono<Response<AddressDTO>> setDefaultAddress(
             @RequestHeader("Authorization") String authHeader,
+            @RequestHeader("X-TenantID") String tenantId,
             @PathVariable Long addressId) {
         Long userId = extractUserId(authHeader);
         return addressService.setDefaultAddress(userId, addressId)

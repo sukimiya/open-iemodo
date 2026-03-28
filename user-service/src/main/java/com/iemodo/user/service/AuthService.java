@@ -56,7 +56,7 @@ public class AuthService {
                                     ? request.getDisplayName()
                                     : request.getEmail().split("@")[0])
                             .oauthProvider("LOCAL")
-                            .status("ACTIVE")
+                            .status(1)  // ACTIVE
                             .build();
                     return userRepository.save(user);
                 })
@@ -152,7 +152,7 @@ public class AuthService {
                                             .oauthSubject(subject)
                                             .displayName(displayName)
                                             .avatarUrl(avatarUrl)
-                                            .status("ACTIVE")
+                                            .status(1)  // ACTIVE
                                             .build();
                                     return userRepository.save(newUser);
                                 }))
@@ -223,7 +223,7 @@ public class AuthService {
                 .phone(user.getPhone())
                 .avatarUrl(user.getAvatarUrl())
                 .oauthProvider(user.getOauthProvider())
-                .status(user.getStatus())
+                .status(user.getStatus() != null && user.getStatus() == 1 ? "ACTIVE" : "DISABLED")
                 .emailVerified(user.getEmailVerified())
                 .phoneVerified(user.getPhoneVerified())
                 .preferredCurrency(user.getPreferredCurrency())

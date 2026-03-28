@@ -1,0 +1,63 @@
+server:
+  port: 8092
+
+spring:
+  application:
+    name: fulfillment-service
+
+  config:
+    import: "nacos:fulfillment-service.yaml?group=IEMODO&refreshEnabled=true"
+
+  cloud:
+    nacos:
+      server-addr: ${NACOS_SERVER_ADDR:localhost:8848}
+      discovery:
+        enabled: true
+        namespace: public
+        group: IEMODO
+      config:
+        enabled: true
+        namespace: public
+        group: IEMODO
+        file-extension: yaml
+
+  r2dbc:
+    url: r2dbc:postgresql://${DB_HOST:localhost}:${DB_PORT:5433}/${DB_NAME:iemodo}
+    username: ${DB_USER:iemodo}
+    password: ${DB_PASSWORD:iemodo123}
+    pool:
+      max-size: 10
+      initial-size: 2
+
+  flyway:
+    enabled: true
+    url: jdbc:postgresql://${DB_HOST:localhost}:${DB_PORT:5433}/${DB_NAME:iemodo}
+    user: ${DB_USER:iemodo}
+    password: ${DB_PASSWORD:iemodo123}
+    schemas: fulfillment_tenant_001,fulfillment_tenant_002
+    locations: classpath:db/migration
+    baseline-on-migrate: true
+
+# Allocation weights
+allocation:
+  weights:
+    cost: 0.25
+    speed: 0.35
+    availability: 0.25
+    service-level: 0.15
+
+# Logging
+logging:
+  level:
+    com.iemodo.fulfillment: DEBUG
+    org.springframework.data.r2dbc: WARN
+
+# Management
+management:
+  endpoints:
+    web:
+      exposure:
+        include: health,info,metrics
+  endpoint:
+    health:
+      show-details: always

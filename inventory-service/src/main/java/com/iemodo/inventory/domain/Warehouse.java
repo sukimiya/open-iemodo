@@ -1,29 +1,26 @@
 package com.iemodo.inventory.domain;
 
+import com.iemodo.common.entity.BaseEntity;
 import lombok.AllArgsConstructor;
-import lombok.Builder;
 import lombok.Data;
+import lombok.EqualsAndHashCode;
 import lombok.NoArgsConstructor;
-import org.springframework.data.annotation.CreatedDate;
-import org.springframework.data.annotation.Id;
-import org.springframework.data.annotation.LastModifiedDate;
+import lombok.experimental.SuperBuilder;
 import org.springframework.data.relational.core.mapping.Table;
 
 import java.math.BigDecimal;
-import java.time.Instant;
 
 /**
  * Warehouse entity - represents a storage facility.
  */
 @Data
-@Builder
+@SuperBuilder
 @NoArgsConstructor
 @AllArgsConstructor
+@EqualsAndHashCode(callSuper = true)
 @Table("warehouses")
-public class Warehouse {
-
-    @Id
-    private Long id;
+public class Warehouse extends BaseEntity {
+    // id is inherited from BaseEntity
 
     private String warehouseCode;
     private String name;
@@ -55,12 +52,6 @@ public class Warehouse {
     // Capacity
     private Integer maxDailyOrders;
     private Integer currentDailyOrders;
-
-    @CreatedDate
-    private Instant createdAt;
-
-    @LastModifiedDate
-    private Instant updatedAt;
 
     // ─── Domain helpers ────────────────────────────────────────────────────
 

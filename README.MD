@@ -1,6 +1,7 @@
 <br />
 
-# iemodo - 跨境电商微服务系统
+# Avacha · iemodo
+## 跨境电商微服务系统
 
 ![Java](https://img.shields.io/badge/Java-21-green?logo=java)
 ![Spring Boot](https://img.shields.io/badge/Spring%20Boot-3.3.0-brightgreen?logo=spring)
@@ -14,7 +15,7 @@
 
 ## 📋 项目概述
 
-**iemodo** 是一个基于 Spring Cloud Alibaba 和 Spring WebFlux 的**企业级跨境电商微服务平台**，专为全球商家提供多店铺管理、订单处理、支付集成等核心功能。该项目采用**全链路响应式架构**和**Schema-per-Tenant 多租户隔离方案**，支持高并发场景（单节点 1000+ QPS）。
+**Avacha** 是一个基于 Spring Cloud Alibaba 和 Spring WebFlux 的**企业级跨境电商微服务平台**（技术代号：iemodo），专为全球商家提供多店铺管理、订单处理、支付集成等核心功能。该项目采用**全链路响应式架构**和**Schema-per-Tenant 多租户隔离方案**，支持高并发场景（单节点 1000+ QPS）。
 
 ### 核心特性
 

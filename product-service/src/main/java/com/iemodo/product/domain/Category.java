@@ -1,28 +1,24 @@
 package com.iemodo.product.domain;
 
+import com.iemodo.common.entity.BaseEntity;
 import lombok.AllArgsConstructor;
-import lombok.Builder;
 import lombok.Data;
+import lombok.EqualsAndHashCode;
 import lombok.NoArgsConstructor;
-import org.springframework.data.annotation.CreatedDate;
-import org.springframework.data.annotation.Id;
-import org.springframework.data.annotation.LastModifiedDate;
+import lombok.experimental.SuperBuilder;
 import org.springframework.data.relational.core.mapping.Table;
-
-import java.time.Instant;
 
 /**
  * Category entity - hierarchical product categorization.
  */
 @Data
-@Builder
+@SuperBuilder
 @NoArgsConstructor
 @AllArgsConstructor
+@EqualsAndHashCode(callSuper = true)
 @Table("categories")
-public class Category {
-
-    @Id
-    private Long id;
+public class Category extends BaseEntity {
+    // id is inherited from BaseEntity
 
     /** Parent category ID for hierarchical structure */
     private Long parentId;
@@ -47,12 +43,6 @@ public class Category {
     private Boolean isActive;
     
     private String seoKeywords;
-
-    @CreatedDate
-    private Instant createdAt;
-
-    @LastModifiedDate
-    private Instant updatedAt;
 
     // ─── Domain helpers ────────────────────────────────────────────────────
 

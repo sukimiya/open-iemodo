@@ -1,11 +1,11 @@
 package com.iemodo.user.domain;
 
+import com.iemodo.common.entity.BaseEntity;
 import lombok.AllArgsConstructor;
-import lombok.Builder;
 import lombok.Data;
+import lombok.EqualsAndHashCode;
 import lombok.NoArgsConstructor;
-import org.springframework.data.annotation.CreatedDate;
-import org.springframework.data.annotation.Id;
+import lombok.experimental.SuperBuilder;
 import org.springframework.data.relational.core.mapping.Table;
 
 import java.time.Instant;
@@ -20,14 +20,13 @@ import java.time.Instant;
  * and Facebook), but each provider+subject combination is unique.
  */
 @Data
-@Builder
+@SuperBuilder
 @NoArgsConstructor
 @AllArgsConstructor
+@EqualsAndHashCode(callSuper = true)
 @Table("oauth_connections")
-public class OAuthConnection {
-
-    @Id
-    private Long id;
+public class OAuthConnection extends BaseEntity {
+    // id is inherited from BaseEntity
 
     /** Reference to the local user (users.id) */
     private Long userId;
@@ -49,9 +48,6 @@ public class OAuthConnection {
 
     /** When the access token expires */
     private Instant tokenExpiresAt;
-
-    @CreatedDate
-    private Instant createdAt;
 
     // ─── Domain behaviour ─────────────────────────────────────────────────
 

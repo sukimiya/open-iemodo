@@ -15,26 +15,26 @@ public interface ProductRepository extends ReactiveCrudRepository<Product, Long>
 
     Mono<Product> findByProductCode(String productCode);
 
-    Mono<Product> findByIdAndDeletedAtIsNull(Long id);
+    Mono<Product> findByIdAndIsValid(Long id);
 
     Mono<Boolean> existsByProductCode(String productCode);
 
-    Flux<Product> findByStatusAndDeletedAtIsNullOrderByCreatedAtDesc(String status);
+    Flux<Product> findByProductStatusAndIsValidOrderByCreateTimeDesc(String productStatus);
 
-    Flux<Product> findByCategoryIdAndStatusAndDeletedAtIsNull(Long categoryId, String status);
+    Flux<Product> findByCategoryIdAndProductStatusAndIsValid(Long categoryId, String productStatus);
 
-    Flux<Product> findByBrandIdAndStatusAndDeletedAtIsNull(Long brandId, String status);
+    Flux<Product> findByBrandIdAndProductStatusAndIsValid(Long brandId, String productStatus);
 
-    Flux<Product> findByIsFeaturedTrueAndStatusAndDeletedAtIsNull(String status);
+    Flux<Product> findByIsFeaturedTrueAndProductStatusAndIsValid(String productStatus);
 
-    Flux<Product> findByIsNewArrivalTrueAndStatusAndDeletedAtIsNull(String status);
+    Flux<Product> findByIsNewArrivalTrueAndProductStatusAndIsValid(String productStatus);
 
-    @Query("SELECT * FROM products WHERE status = 'ACTIVE' AND deleted_at IS NULL " +
+    @Query("SELECT * FROM products WHERE product_status = 'ACTIVE' AND is_valid = 1 " +
            "AND (title ILIKE :keyword OR search_keywords ILIKE :keyword) " +
            "ORDER BY sale_count DESC LIMIT :limit OFFSET :offset")
     Flux<Product> searchByKeyword(String keyword, int limit, int offset);
 
-    @Query("SELECT COUNT(*) FROM products WHERE status = 'ACTIVE' AND deleted_at IS NULL " +
+    @Query("SELECT COUNT(*) FROM products WHERE product_status = 'ACTIVE' AND is_valid = 1 " +
            "AND (title ILIKE :keyword OR search_keywords ILIKE :keyword)")
     Mono<Long> countByKeyword(String keyword);
 

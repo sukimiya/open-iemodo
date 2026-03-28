@@ -1,0 +1,55 @@
+server:
+  port: 8087
+
+spring:
+  application:
+    name: map-service
+
+  config:
+    import: "nacos:map-service.yaml?group=IEMODO&refreshEnabled=true"
+
+  cloud:
+    nacos:
+      server-addr: ${NACOS_SERVER_ADDR:localhost:8848}
+      discovery:
+        enabled: true
+        namespace: public
+        group: IEMODO
+      config:
+        enabled: true
+        namespace: public
+        group: IEMODO
+        file-extension: yaml
+
+  data:
+    redis:
+      host: ${REDIS_HOST:localhost}
+      port: ${REDIS_PORT:6379}
+      password: ${REDIS_PASSWORD:redis123}
+
+# Map provider configuration
+map:
+  google:
+    api-key: ${GOOGLE_MAPS_API_KEY:}
+    enabled: true
+  baidu:
+    api-key: ${BAIDU_MAPS_API_KEY:}
+    enabled: true
+  cache:
+    geocode-ttl-hours: 24
+    route-ttl-hours: 1
+
+# Logging
+logging:
+  level:
+    com.iemodo.map: DEBUG
+
+# Management
+management:
+  endpoints:
+    web:
+      exposure:
+        include: health,info,metrics
+  endpoint:
+    health:
+      show-details: always

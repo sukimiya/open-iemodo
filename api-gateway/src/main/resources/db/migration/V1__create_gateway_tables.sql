@@ -5,7 +5,7 @@
 
 -- ─── gateway_routes ──────────────────────────────────────────────────────────
 CREATE TABLE IF NOT EXISTS gateway_routes (
-    id              BIGSERIAL       PRIMARY KEY,
+    id              BIGINT          PRIMARY KEY,  -- Snowflake ID
     route_id        VARCHAR(100)    NOT NULL UNIQUE,    -- Route identifier (e.g., "user-service-route")
     uri             VARCHAR(500)    NOT NULL,           -- Target URI (e.g., "lb://user-service")
     path            VARCHAR(500)    NOT NULL,           -- Path predicate (e.g., "/uc/**")
@@ -14,8 +14,14 @@ CREATE TABLE IF NOT EXISTS gateway_routes (
     enabled         BOOLEAN         NOT NULL DEFAULT TRUE,
     metadata        JSONB,                              -- Additional metadata
     description     VARCHAR(500),
-    created_at      TIMESTAMPTZ     NOT NULL DEFAULT NOW(),
-    updated_at      TIMESTAMPTZ     NOT NULL DEFAULT NOW()
+    
+    -- BaseEntity audit fields
+    status          INTEGER         NOT NULL DEFAULT 1,
+    create_by       BIGINT,
+    create_time     TIMESTAMPTZ,
+    update_by       BIGINT,
+    update_time     TIMESTAMPTZ,
+    is_valid        INTEGER         NOT NULL DEFAULT 1
 );
 
 CREATE INDEX IF NOT EXISTS idx_gateway_routes_enabled ON gateway_routes (enabled);
@@ -23,7 +29,7 @@ CREATE INDEX IF NOT EXISTS idx_gateway_routes_priority ON gateway_routes (priori
 
 -- ─── rate_limit_rules ────────────────────────────────────────────────────────
 CREATE TABLE IF NOT EXISTS rate_limit_rules (
-    id                  BIGSERIAL       PRIMARY KEY,
+    id                  BIGINT          PRIMARY KEY,  -- Snowflake ID
     rule_name           VARCHAR(100)    NOT NULL UNIQUE,
     route_id            VARCHAR(100),                       -- Associated route (optional)
     key_resolver        VARCHAR(50)     NOT NULL DEFAULT 'PRINCIPAL_NAME', -- PRINCIPAL_NAME | IP_ADDRESS | HEADER
@@ -34,8 +40,14 @@ CREATE TABLE IF NOT EXISTS rate_limit_rules (
     lua_script          TEXT,                               -- Custom Lua script (optional)
     enabled             BOOLEAN         NOT NULL DEFAULT TRUE,
     description         VARCHAR(500),
-    created_at          TIMESTAMPTZ     NOT NULL DEFAULT NOW(),
-    updated_at          TIMESTAMPTZ     NOT NULL DEFAULT NOW()
+    
+    -- BaseEntity audit fields
+    status              INTEGER         NOT NULL DEFAULT 1,
+    create_by           BIGINT,
+    create_time         TIMESTAMPTZ,
+    update_by           BIGINT,
+    update_time         TIMESTAMPTZ,
+    is_valid            INTEGER         NOT NULL DEFAULT 1
 );
 
 CREATE INDEX IF NOT EXISTS idx_rate_limit_rules_route ON rate_limit_rules (route_id);
@@ -43,7 +55,7 @@ CREATE INDEX IF NOT EXISTS idx_rate_limit_rules_enabled ON rate_limit_rules (ena
 
 -- ─── jwt_public_keys ─────────────────────────────────────────────────────────
 CREATE TABLE IF NOT EXISTS jwt_public_keys (
-    id              BIGSERIAL       PRIMARY KEY,
+    id              BIGINT          PRIMARY KEY,  -- Snowflake ID
     key_id          VARCHAR(100)    NOT NULL UNIQUE,    -- Key identifier
     algorithm       VARCHAR(20)     NOT NULL DEFAULT 'RS256', -- RS256 | ES256
     public_key_pem  TEXT            NOT NULL,           -- Public key in PEM format
@@ -52,7 +64,14 @@ CREATE TABLE IF NOT EXISTS jwt_public_keys (
     active          BOOLEAN         NOT NULL DEFAULT TRUE,
     valid_from      TIMESTAMPTZ     NOT NULL DEFAULT NOW(),
     valid_until     TIMESTAMPTZ,                        -- Key expiration
-    created_at      TIMESTAMPTZ     NOT NULL DEFAULT NOW()
+    
+    -- BaseEntity audit fields
+    status          INTEGER         NOT NULL DEFAULT 1,
+    create_by       BIGINT,
+    create_time     TIMESTAMPTZ,
+    update_by       BIGINT,
+    update_time     TIMESTAMPTZ,
+    is_valid        INTEGER         NOT NULL DEFAULT 1
 );
 
 CREATE INDEX IF NOT EXISTS idx_jwt_public_keys_active ON jwt_public_keys (active);
@@ -60,7 +79,7 @@ CREATE INDEX IF NOT EXISTS idx_jwt_public_keys_active ON jwt_public_keys (active
 -- ─── gateway_access_logs ─────────────────────────────────────────────────────
 -- Partitioned by range for efficient log rotation
 CREATE TABLE IF NOT EXISTS gateway_access_logs (
-    id              BIGSERIAL,
+    id              BIGINT,
     request_id      VARCHAR(100),                       -- Unique request ID
     trace_id        VARCHAR(100),                       -- Distributed trace ID
     tenant_id       VARCHAR(50),                        -- Tenant identifier
@@ -77,9 +96,17 @@ CREATE TABLE IF NOT EXISTS gateway_access_logs (
     error_message   VARCHAR(1000),
     route_id        VARCHAR(100),
     target_uri      VARCHAR(500),
-    created_at      TIMESTAMPTZ     NOT NULL DEFAULT NOW(),
-    PRIMARY KEY (id, created_at)
-) PARTITION BY RANGE (created_at);
+    
+    -- BaseEntity audit fields
+    status          INTEGER         NOT NULL DEFAULT 1,
+    create_by       BIGINT,
+    create_time     TIMESTAMPTZ     NOT NULL DEFAULT NOW(),
+    update_by       BIGINT,
+    update_time     TIMESTAMPTZ,
+    is_valid        INTEGER         NOT NULL DEFAULT 1,
+    
+    PRIMARY KEY (id, create_time)
+) PARTITION BY RANGE (create_time);
 
 -- Create initial partitions (monthly)
 CREATE TABLE IF NOT EXISTS gateway_access_logs_y2024m03 PARTITION OF gateway_access_logs
@@ -91,22 +118,22 @@ CREATE TABLE IF NOT EXISTS gateway_access_logs_y2024m05 PARTITION OF gateway_acc
 CREATE TABLE IF NOT EXISTS gateway_access_logs_y2024m06 PARTITION OF gateway_access_logs
     FOR VALUES FROM ('2024-06-01') TO ('2024-07-01');
 
-CREATE INDEX IF NOT EXISTS idx_access_logs_created_at ON gateway_access_logs (created_at);
-CREATE INDEX IF NOT EXISTS idx_access_logs_tenant ON gateway_access_logs (tenant_id, created_at);
+CREATE INDEX IF NOT EXISTS idx_access_logs_created_at ON gateway_access_logs (create_time);
+CREATE INDEX IF NOT EXISTS idx_access_logs_tenant ON gateway_access_logs (tenant_id, create_time);
 CREATE INDEX IF NOT EXISTS idx_access_logs_trace ON gateway_access_logs (trace_id);
-CREATE INDEX IF NOT EXISTS idx_access_logs_status ON gateway_access_logs (status_code, created_at);
+CREATE INDEX IF NOT EXISTS idx_access_logs_status ON gateway_access_logs (status_code, create_time);
 
 -- ─── Seed data: default routes ───────────────────────────────────────────────
-INSERT INTO gateway_routes (route_id, uri, path, priority, description) VALUES
-    ('user-service-route', 'lb://user-service', '/uc/**', 100, 'User Auth Service'),
-    ('order-service-route', 'lb://order-service', '/oc/**', 100, 'Order Service'),
-    ('tenant-management-route', 'lb://tenant-management-service', '/api/v1/tenants/**', 50, 'Tenant Management Service'),
-    ('file-service-route', 'lb://file-service', '/api/v1/files/**', 100, 'File Storage Service')
+INSERT INTO gateway_routes (id, route_id, uri, path, priority, description) VALUES
+    (100001, 'user-service-route', 'lb://user-service', '/uc/**', 100, 'User Auth Service'),
+    (100002, 'order-service-route', 'lb://order-service', '/oc/**', 100, 'Order Service'),
+    (100003, 'tenant-management-route', 'lb://tenant-management-service', '/api/v1/tenants/**', 50, 'Tenant Management Service'),
+    (100004, 'file-service-route', 'lb://file-service', '/api/v1/files/**', 100, 'File Storage Service')
 ON CONFLICT (route_id) DO NOTHING;
 
 -- ─── Seed data: default rate limit rules ─────────────────────────────────────
-INSERT INTO rate_limit_rules (rule_name, key_resolver, replenish_rate, burst_capacity, description) VALUES
-    ('default-public', 'IP_ADDRESS', 100, 200, 'Default public API rate limit'),
-    ('default-authenticated', 'PRINCIPAL_NAME', 1000, 2000, 'Default authenticated API rate limit'),
-    ('strict-auth', 'IP_ADDRESS', 10, 20, 'Strict limit for auth endpoints')
+INSERT INTO rate_limit_rules (id, rule_name, key_resolver, replenish_rate, burst_capacity, description) VALUES
+    (100001, 'default-public', 'IP_ADDRESS', 100, 200, 'Default public API rate limit'),
+    (100002, 'default-authenticated', 'PRINCIPAL_NAME', 1000, 2000, 'Default authenticated API rate limit'),
+    (100003, 'strict-auth', 'IP_ADDRESS', 10, 20, 'Strict limit for auth endpoints')
 ON CONFLICT (rule_name) DO NOTHING;

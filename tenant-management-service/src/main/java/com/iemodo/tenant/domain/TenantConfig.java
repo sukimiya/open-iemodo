@@ -1,15 +1,12 @@
 package com.iemodo.tenant.domain;
 
+import com.iemodo.common.entity.BaseEntity;
 import lombok.AllArgsConstructor;
-import lombok.Builder;
 import lombok.Data;
+import lombok.EqualsAndHashCode;
 import lombok.NoArgsConstructor;
-import org.springframework.data.annotation.CreatedDate;
-import org.springframework.data.annotation.Id;
-import org.springframework.data.annotation.LastModifiedDate;
+import lombok.experimental.SuperBuilder;
 import org.springframework.data.relational.core.mapping.Table;
-
-import java.time.Instant;
 
 /**
  * Tenant Configuration — maps to the {@code tenant_configs} table.
@@ -23,14 +20,14 @@ import java.time.Instant;
  * </ul>
  */
 @Data
-@Builder
+@SuperBuilder
 @NoArgsConstructor
 @AllArgsConstructor
+@EqualsAndHashCode(callSuper = true)
 @Table("tenant_configs")
-public class TenantConfig {
+public class TenantConfig extends BaseEntity {
 
-    @Id
-    private Long id;
+    // id is inherited from BaseEntity
 
     private String tenantId;
 
@@ -48,12 +45,6 @@ public class TenantConfig {
 
     /** Whether this config can be modified by the tenant admin */
     private Boolean editable;
-
-    @CreatedDate
-    private Instant createdAt;
-
-    @LastModifiedDate
-    private Instant updatedAt;
 
     // ─── Common config keys ───────────────────────────────────────────────
 

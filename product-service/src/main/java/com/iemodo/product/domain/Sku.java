@@ -1,29 +1,26 @@
 package com.iemodo.product.domain;
 
+import com.iemodo.common.entity.BaseEntity;
 import lombok.AllArgsConstructor;
-import lombok.Builder;
 import lombok.Data;
+import lombok.EqualsAndHashCode;
 import lombok.NoArgsConstructor;
-import org.springframework.data.annotation.CreatedDate;
-import org.springframework.data.annotation.Id;
-import org.springframework.data.annotation.LastModifiedDate;
+import lombok.experimental.SuperBuilder;
 import org.springframework.data.relational.core.mapping.Table;
 
 import java.math.BigDecimal;
-import java.time.Instant;
 
 /**
  * SKU (Stock Keeping Unit) entity - represents a specific product variant.
  */
 @Data
-@Builder
+@SuperBuilder
 @NoArgsConstructor
 @AllArgsConstructor
+@EqualsAndHashCode(callSuper = true)
 @Table("skus")
-public class Sku {
-
-    @Id
-    private Long id;
+public class Sku extends BaseEntity {
+    // id is inherited from BaseEntity
 
     /** Parent product ID */
     private Long productId;
@@ -60,24 +57,16 @@ public class Sku {
     private String bannedInCountries;
 
     /** ACTIVE, OUT_OF_STOCK, DISABLED */
-    private String status;
-
-    @CreatedDate
-    private Instant createdAt;
-
-    @LastModifiedDate
-    private Instant updatedAt;
-    
-    private Instant deletedAt;
+    private String skuStatus;
 
     // ─── Domain helpers ────────────────────────────────────────────────────
 
     public boolean isActive() {
-        return "ACTIVE".equals(status) && deletedAt == null;
+        return "ACTIVE".equals(skuStatus) && getIsValid() == 1;
     }
 
     public boolean isOutOfStock() {
-        return "OUT_OF_STOCK".equals(status) || 
+        return "OUT_OF_STOCK".equals(skuStatus) || 
                (stockQuantity != null && stockQuantity <= 0);
     }
 

@@ -31,7 +31,8 @@ public class DeviceController {
      */
     @GetMapping
     public Flux<Response<UserDevice>> getMyDevices(
-            @RequestHeader("Authorization") String authHeader) {
+            @RequestHeader("Authorization") String authHeader,
+            @RequestHeader("X-TenantID") String tenantId) {
         Long userId = extractUserId(authHeader);
         return deviceService.getUserDevices(userId)
                 .map(Response::success);
@@ -43,6 +44,7 @@ public class DeviceController {
     @PostMapping
     public Mono<Response<UserDevice>> registerDevice(
             @RequestHeader("Authorization") String authHeader,
+            @RequestHeader("X-TenantID") String tenantId,
             @Valid @RequestBody DeviceRegistrationRequest request) {
         Long userId = extractUserId(authHeader);
         return deviceService.registerDevice(
@@ -61,6 +63,7 @@ public class DeviceController {
     @DeleteMapping("/{deviceId}")
     public Mono<Response<Void>> revokeDevice(
             @RequestHeader("Authorization") String authHeader,
+            @RequestHeader("X-TenantID") String tenantId,
             @PathVariable String deviceId) {
         Long userId = extractUserId(authHeader);
         return deviceService.revokeDevice(userId, deviceId)
@@ -73,6 +76,7 @@ public class DeviceController {
     @DeleteMapping("/others")
     public Mono<Response<Void>> revokeOtherDevices(
             @RequestHeader("Authorization") String authHeader,
+            @RequestHeader("X-TenantID") String tenantId,
             @RequestParam("currentDeviceId") String currentDeviceId) {
         Long userId = extractUserId(authHeader);
         return deviceService.revokeOtherDevices(userId, currentDeviceId)
@@ -84,7 +88,8 @@ public class DeviceController {
      */
     @DeleteMapping
     public Mono<Response<Void>> revokeAllDevices(
-            @RequestHeader("Authorization") String authHeader) {
+            @RequestHeader("Authorization") String authHeader,
+            @RequestHeader("X-TenantID") String tenantId) {
         Long userId = extractUserId(authHeader);
         return deviceService.revokeAllDevices(userId)
                 .then(Mono.just(Response.success()));

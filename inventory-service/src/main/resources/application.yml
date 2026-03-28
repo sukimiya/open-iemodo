@@ -5,9 +5,25 @@ spring:
   application:
     name: inventory-service
 
+  config:
+    import: "nacos:inventory-service.yaml?group=IEMODO&refreshEnabled=true"
+
+  cloud:
+    nacos:
+      server-addr: ${NACOS_SERVER_ADDR:localhost:8848}
+      discovery:
+        enabled: true
+        namespace: public
+        group: IEMODO
+      config:
+        enabled: true
+        namespace: public
+        group: IEMODO
+        file-extension: yaml
+
   # R2DBC for reactive database access
   r2dbc:
-    url: r2dbc:postgresql://localhost:5432/iemodo
+    url: r2dbc:postgresql://localhost:5433/iemodo
     username: ${DB_USER:iemodo}
     password: ${DB_PASS:iemodo}
     pool:
@@ -16,7 +32,7 @@ spring:
 
   # Flyway for schema migrations
   flyway:
-    url: jdbc:postgresql://localhost:5432/iemodo
+    url: jdbc:postgresql://localhost:5433/iemodo
     user: ${DB_USER:iemodo}
     password: ${DB_PASS:iemodo}
     locations: classpath:db/migration

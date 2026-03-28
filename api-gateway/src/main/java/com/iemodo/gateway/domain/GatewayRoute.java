@@ -1,15 +1,12 @@
 package com.iemodo.gateway.domain;
 
+import com.iemodo.common.entity.BaseEntity;
 import lombok.AllArgsConstructor;
-import lombok.Builder;
 import lombok.Data;
+import lombok.EqualsAndHashCode;
 import lombok.NoArgsConstructor;
-import org.springframework.data.annotation.CreatedDate;
-import org.springframework.data.annotation.Id;
-import org.springframework.data.annotation.LastModifiedDate;
+import lombok.experimental.SuperBuilder;
 import org.springframework.data.relational.core.mapping.Table;
-
-import java.time.Instant;
 
 /**
  * Gateway route configuration entity.
@@ -18,14 +15,14 @@ import java.time.Instant;
  * These routes are loaded dynamically and can be updated without restarting the gateway.
  */
 @Data
-@Builder
+@SuperBuilder
 @NoArgsConstructor
 @AllArgsConstructor
+@EqualsAndHashCode(callSuper = true)
 @Table("gateway_routes")
-public class GatewayRoute {
+public class GatewayRoute extends BaseEntity {
 
-    @Id
-    private Long id;
+    // id is inherited from BaseEntity
 
     /** Route identifier (e.g., "user-service-route") */
     private String routeId;
@@ -50,12 +47,6 @@ public class GatewayRoute {
 
     /** Description of this route */
     private String description;
-
-    @CreatedDate
-    private Instant createdAt;
-
-    @LastModifiedDate
-    private Instant updatedAt;
 
     // ─── Domain helpers ────────────────────────────────────────────────────
 

@@ -1,15 +1,12 @@
 package com.iemodo.user.domain;
 
+import com.iemodo.common.entity.BaseEntity;
 import lombok.AllArgsConstructor;
-import lombok.Builder;
 import lombok.Data;
+import lombok.EqualsAndHashCode;
 import lombok.NoArgsConstructor;
-import org.springframework.data.annotation.CreatedDate;
-import org.springframework.data.annotation.Id;
-import org.springframework.data.annotation.LastModifiedDate;
+import lombok.experimental.SuperBuilder;
 import org.springframework.data.relational.core.mapping.Table;
-
-import java.time.Instant;
 
 /**
  * User address book entry — maps to the {@code user_addresses} table.
@@ -18,14 +15,14 @@ import java.time.Instant;
  * Uses GeoHash for location-based queries and address standardization.
  */
 @Data
-@Builder
+@SuperBuilder
 @NoArgsConstructor
 @AllArgsConstructor
+@EqualsAndHashCode(callSuper = true)
 @Table("user_addresses")
-public class UserAddress {
+public class UserAddress extends BaseEntity {
 
-    @Id
-    private Long id;
+    // id is inherited from BaseEntity
 
     /** Reference to the owning user (users.id) */
     private Long customerId;
@@ -65,14 +62,6 @@ public class UserAddress {
     private Boolean isDefault;          // Default shipping address
     private Boolean isDefaultBilling;   // Default billing address
 
-    // ─── Timestamps ────────────────────────────────────────────────────────
-
-    @CreatedDate
-    private Instant createdAt;
-
-    @LastModifiedDate
-    private Instant updatedAt;
-
     // ─── Domain behaviour ─────────────────────────────────────────────────
 
     /**
@@ -99,5 +88,15 @@ public class UserAddress {
                 && addressLine1 != null && !addressLine1.isBlank()
                 && city != null && !city.isBlank()
                 && countryCode != null && !countryCode.isBlank();
+    }
+
+    // ─── Compatibility methods for BaseEntity audit fields ─────────────────
+
+    public java.time.Instant getCreatedAt() {
+        return getCreateTime();
+    }
+
+    public java.time.Instant getUpdatedAt() {
+        return getUpdateTime();
     }
 }

@@ -1,0 +1,93 @@
+server:
+  port: 8092
+
+spring:
+  application:
+    name: fulfillment-service
+  main:
+    web-application-type: reactive
+  cloud:
+    nacos:
+      discovery:
+        server-addr: ${NACOS_SERVER_ADDR:localhost:8848}
+        namespace: ${NACOS_NAMESPACE:}
+        group: IEMODO
+      config:
+        server-addr: ${NACOS_SERVER_ADDR:localhost:8848}
+        namespace: ${NACOS_NAMESPACE:}
+        group: IEMODO
+        file-extension: yaml
+    gateway:
+      globalcors:
+        cors-configurations:
+          '[/**]':
+            allowedOrigins: "*"
+            allowedMethods: "*"
+            allowedHeaders: "*"
+  r2dbc:
+    url: r2dbc:postgresql://${DB_HOST:localhost}:${DB_PORT:5432}/${DB_NAME:iemodo}
+    username: ${DB_USERNAME:postgres}
+    password: ${DB_PASSWORD:postgres123}
+  redis:
+    host: ${REDIS_HOST:localhost}
+    port: ${REDIS_PORT:6379}
+    password: ${REDIS_PASSWORD:}
+    database: 0
+    timeout: 5000ms
+    lettuce:
+      pool:
+        max-active: 8
+        max-idle: 8
+        min-idle: 0
+  cache:
+    type: redis
+    redis:
+      time-to-live: 3600000
+      cache-null-values: false
+
+management:
+  endpoints:
+    web:
+      exposure:
+        include: health,info,metrics,prometheus
+  endpoint:
+    health:
+      show-details: when_authorized
+      probes:
+        enabled: true
+  metrics:
+    export:
+      prometheus:
+        enabled: true
+
+logging:
+  level:
+    com.iemodo.fulfillment: INFO
+    org.springframework.data.r2dbc: WARN
+    io.r2dbc.postgresql: WARN
+
+# Fulfillment Service Configuration
+fulfillment:
+  warehouse-allocation:
+    # Weights for composite scoring
+    distance-weight: 0.4
+    inventory-weight: 0.3
+    cost-weight: 0.3
+    # Minimum stock level to consider warehouse available
+    min-stock-level: 10
+  delivery-estimate:
+    # Default processing days
+    warehouse-processing-days: 1
+    # Domestic delivery days range
+    domestic-min-days: 1
+    domestic-max-days: 3
+    # International delivery days range
+    international-min-days: 3
+    international-max-days: 10
+  stock-transfer:
+    # Days of inventory to maintain at destination
+    days-of-inventory-target: 14
+    # Minimum transfer quantity
+    min-transfer-quantity: 50
+    # Analysis lookback period in days
+    analysis-lookback-days: 30

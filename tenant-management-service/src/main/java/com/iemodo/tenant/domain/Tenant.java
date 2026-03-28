@@ -1,12 +1,11 @@
 package com.iemodo.tenant.domain;
 
+import com.iemodo.common.entity.BaseEntity;
 import lombok.AllArgsConstructor;
-import lombok.Builder;
 import lombok.Data;
+import lombok.EqualsAndHashCode;
 import lombok.NoArgsConstructor;
-import org.springframework.data.annotation.CreatedDate;
-import org.springframework.data.annotation.Id;
-import org.springframework.data.annotation.LastModifiedDate;
+import lombok.experimental.SuperBuilder;
 import org.springframework.data.relational.core.mapping.Table;
 
 import java.time.Instant;
@@ -17,14 +16,14 @@ import java.time.Instant;
  * <p>Platform-level table managing all tenants in the system.
  */
 @Data
-@Builder
+@SuperBuilder
 @NoArgsConstructor
 @AllArgsConstructor
+@EqualsAndHashCode(callSuper = true)
 @Table("tenants")
-public class Tenant {
+public class Tenant extends BaseEntity {
 
-    @Id
-    private Long id;
+    // id is inherited from BaseEntity
 
     /** Unique tenant identifier (e.g., "acme-corp", "demo-tenant") */
     private String tenantId;
@@ -36,7 +35,7 @@ public class Tenant {
     private String tenantCode;
 
     /** ACTIVE | SUSPENDED | DELETED */
-    private String status;
+    private String tenantStatus;
 
     /** Plan type: STANDARD | PROFESSIONAL | ENTERPRISE */
     private String planType;
@@ -53,30 +52,38 @@ public class Tenant {
     /** Database name */
     private String dbName;
 
-    @CreatedDate
-    private Instant createdAt;
+    // ─── Compatibility methods ────────────────────────────────────────────
 
-    @LastModifiedDate
-    private Instant updatedAt;
+    /**
+     * 兼容方法：获取创建时间（返回 BaseEntity 的 createTime）
+     */
+    public Instant getCreatedAt() {
+        return getCreateTime();
+    }
 
-    private Instant deletedAt;
+    /**
+     * 兼容方法：获取更新时间（返回 BaseEntity 的 updateTime）
+     */
+    public Instant getUpdatedAt() {
+        return getUpdateTime();
+    }
 
     // ─── Domain behaviour ─────────────────────────────────────────────────
 
     public boolean isActive() {
-        return "ACTIVE".equals(status);
+        return "ACTIVE".equals(tenantStatus);
     }
 
     public void suspend() {
-        this.status = "SUSPENDED";
+        this.tenantStatus = "SUSPENDED";
     }
 
     public void activate() {
-        this.status = "ACTIVE";
+        this.tenantStatus = "ACTIVE";
     }
 
     public void softDelete() {
-        this.status = "DELETED";
-        this.deletedAt = Instant.now();
+        this.tenantStatus = "DELETED";
+        setIsValid(0);
     }
 }

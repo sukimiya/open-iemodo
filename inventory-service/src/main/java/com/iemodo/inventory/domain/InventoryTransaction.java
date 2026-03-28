@@ -1,27 +1,24 @@
 package com.iemodo.inventory.domain;
 
+import com.iemodo.common.entity.BaseEntity;
 import lombok.AllArgsConstructor;
-import lombok.Builder;
 import lombok.Data;
+import lombok.EqualsAndHashCode;
 import lombok.NoArgsConstructor;
-import org.springframework.data.annotation.CreatedDate;
-import org.springframework.data.annotation.Id;
+import lombok.experimental.SuperBuilder;
 import org.springframework.data.relational.core.mapping.Table;
-
-import java.time.Instant;
 
 /**
  * Inventory transaction entity - records all stock movements.
  */
 @Data
-@Builder
+@SuperBuilder
 @NoArgsConstructor
 @AllArgsConstructor
+@EqualsAndHashCode(callSuper = true)
 @Table("inventory_transactions")
-public class InventoryTransaction {
-
-    @Id
-    private Long id;
+public class InventoryTransaction extends BaseEntity {
+    // id is inherited from BaseEntity
 
     private Long warehouseId;
     private Long skuId;
@@ -47,9 +44,6 @@ public class InventoryTransaction {
     private String notes;
 
     private Long createdBy;
-
-    @CreatedDate
-    private Instant createdAt;
 
     // ─── Transaction types ─────────────────────────────────────────────────
 

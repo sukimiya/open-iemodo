@@ -57,11 +57,138 @@ spring:
           predicates:
             - Path=/pc/**
 
-        # Payment Service: /pay/** (placeholder)
+        # Payment Service: /pay/**
         - id: payment-service-route
           uri: lb://payment-service
           predicates:
             - Path=/pay/**
+
+        # Pricing Service: /pricing/**
+        - id: pricing-service-route
+          uri: lb://pricing-service
+          predicates:
+            - Path=/pricing/**
+
+        # Tax Service: /tax/**
+        - id: tax-service-route
+          uri: lb://tax-service
+          predicates:
+            - Path=/tax/**
+
+        # Map Service: /map/**
+        - id: map-service-route
+          uri: lb://map-service
+          predicates:
+            - Path=/map/**
+
+        # Marketing Service: /marketing/**
+        - id: marketing-service-route
+          uri: lb://marketing-service
+          predicates:
+            - Path=/marketing/**
+
+        # File Service: /file/**
+        - id: file-service-route
+          uri: lb://file-service
+          predicates:
+            - Path=/file/**
+
+        # Tenant Management Service: /tenant/**
+        - id: tenant-management-service-route
+          uri: lb://tenant-management-service
+          predicates:
+            - Path=/tenant/**
+
+        # Fulfillment Service: /ff/**
+        - id: fulfillment-service-route
+          uri: lb://fulfillment-service
+          predicates:
+            - Path=/ff/**
+
+        # Swagger API Docs aggregation
+        - id: user-service-api-docs
+          uri: lb://user-service
+          predicates:
+            - Path=/user-service/v3/api-docs
+          filters:
+            - RewritePath=/user-service/(?<segment>.*), /${segment}
+
+        - id: product-service-api-docs
+          uri: lb://product-service
+          predicates:
+            - Path=/product-service/v3/api-docs
+          filters:
+            - RewritePath=/product-service/(?<segment>.*), /${segment}
+
+        - id: order-service-api-docs
+          uri: lb://order-service
+          predicates:
+            - Path=/order-service/v3/api-docs
+          filters:
+            - RewritePath=/order-service/(?<segment>.*), /${segment}
+
+        - id: inventory-service-api-docs
+          uri: lb://inventory-service
+          predicates:
+            - Path=/inventory-service/v3/api-docs
+          filters:
+            - RewritePath=/inventory-service/(?<segment>.*), /${segment}
+
+        - id: payment-service-api-docs
+          uri: lb://payment-service
+          predicates:
+            - Path=/payment-service/v3/api-docs
+          filters:
+            - RewritePath=/payment-service/(?<segment>.*), /${segment}
+
+        - id: pricing-service-api-docs
+          uri: lb://pricing-service
+          predicates:
+            - Path=/pricing-service/v3/api-docs
+          filters:
+            - RewritePath=/pricing-service/(?<segment>.*), /${segment}
+
+        - id: tax-service-api-docs
+          uri: lb://tax-service
+          predicates:
+            - Path=/tax-service/v3/api-docs
+          filters:
+            - RewritePath=/tax-service/(?<segment>.*), /${segment}
+
+        - id: map-service-api-docs
+          uri: lb://map-service
+          predicates:
+            - Path=/map-service/v3/api-docs
+          filters:
+            - RewritePath=/map-service/(?<segment>.*), /${segment}
+
+        - id: marketing-service-api-docs
+          uri: lb://marketing-service
+          predicates:
+            - Path=/marketing-service/v3/api-docs
+          filters:
+            - RewritePath=/marketing-service/(?<segment>.*), /${segment}
+
+        - id: file-service-api-docs
+          uri: lb://file-service
+          predicates:
+            - Path=/file-service/v3/api-docs
+          filters:
+            - RewritePath=/file-service/(?<segment>.*), /${segment}
+
+        - id: tenant-management-service-api-docs
+          uri: lb://tenant-management-service
+          predicates:
+            - Path=/tenant-management-service/v3/api-docs
+          filters:
+            - RewritePath=/tenant-management-service/(?<segment>.*), /${segment}
+
+        - id: fulfillment-service-api-docs
+          uri: lb://fulfillment-service
+          predicates:
+            - Path=/fulfillment-service/v3/api-docs
+          filters:
+            - RewritePath=/fulfillment-service/(?<segment>.*), /${segment}
 
     # ─── Sentinel ─────────────────────────────────────────────────────────
     sentinel:
@@ -72,7 +199,7 @@ spring:
 
   # ─── R2DBC (dynamic routes + rate limits) ─────────────────────────────
   r2dbc:
-    url: r2dbc:postgresql://localhost:5432/iemodo?schema=gateway_config
+    url: r2dbc:postgresql://localhost:5433/iemodo?schema=gateway_config
     username: ${DB_USER:iemodo}
     password: ${DB_PASS:iemodo}
     pool:
@@ -93,7 +220,7 @@ spring:
 
   # ─── Flyway for schema management ─────────────────────────────────────
   flyway:
-    url: jdbc:postgresql://localhost:5432/iemodo?currentSchema=gateway_config
+    url: jdbc:postgresql://localhost:5433/iemodo?currentSchema=gateway_config
     user: ${DB_USER:iemodo}
     password: ${DB_PASS:iemodo}
     schemas: gateway_config
@@ -115,6 +242,10 @@ iemodo:
       - GET:/uc/api/v1/auth/oauth2/**
       - GET:/actuator/**
       - GET:/health
+      - GET:/swagger-ui/**
+      - GET:/v3/api-docs/**
+      - GET:/webjars/swagger-ui/**
+      - /swagger-ui.html
 
 # ─── Actuator ───────────────────────────────────────────────────────────
 management:

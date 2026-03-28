@@ -20,6 +20,12 @@
         <module>file-service</module>
         <module>product-service</module>
         <module>inventory-service</module>
+        <module>payment-service</module>
+        <module>pricing-service</module>
+        <module>tax-service</module>
+        <module>map-service</module>
+        <module>marketing-service</module>
+        <module>fulfillment-service</module>
     </modules>
 
     <properties>
@@ -34,7 +40,7 @@
         <spring-cloud-alibaba.version>2023.0.1.0</spring-cloud-alibaba.version>
 
         <!-- Utility versions -->
-        <lombok.version>1.18.36</lombok.version>
+        <lombok.version>1.18.44</lombok.version>
         <mapstruct.version>1.5.5.Final</mapstruct.version>
         <jjwt.version>0.12.5</jjwt.version>
         <testcontainers.version>1.19.7</testcontainers.version>

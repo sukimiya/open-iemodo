@@ -16,7 +16,7 @@ public class OrderDTO {
     private String orderNo;
     private String tenantId;
     private Long customerId;
-    private OrderStatus status;
+    private OrderStatus orderStatus;
     private BigDecimal totalAmount;
     private String currency;
     private String shippingName;

@@ -1,29 +1,25 @@
 package com.iemodo.product.domain;
 
+import com.iemodo.common.entity.BaseEntity;
 import lombok.AllArgsConstructor;
-import lombok.Builder;
 import lombok.Data;
+import lombok.EqualsAndHashCode;
 import lombok.NoArgsConstructor;
-import org.springframework.data.annotation.CreatedDate;
-import org.springframework.data.annotation.Id;
-import org.springframework.data.annotation.LastModifiedDate;
+import lombok.experimental.SuperBuilder;
 import org.springframework.data.relational.core.mapping.Table;
-
-import java.time.Instant;
 
 /**
  * Product visibility and restrictions per country.
  * Controls which products are visible/purchasable in specific countries.
  */
 @Data
-@Builder
+@SuperBuilder
 @NoArgsConstructor
 @AllArgsConstructor
+@EqualsAndHashCode(callSuper = true)
 @Table("product_country_visibility")
-public class ProductCountryVisibility {
-
-    @Id
-    private Long id;
+public class ProductCountryVisibility extends BaseEntity {
+    // id is inherited from BaseEntity
 
     private Long productId;
     
@@ -41,12 +37,6 @@ public class ProductCountryVisibility {
     
     /** Required certifications for this country */
     private String requiredCertifications;
-
-    @CreatedDate
-    private Instant createdAt;
-
-    @LastModifiedDate
-    private Instant updatedAt;
 
     // ─── Domain helpers ────────────────────────────────────────────────────
 

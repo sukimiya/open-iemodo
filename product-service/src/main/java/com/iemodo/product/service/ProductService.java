@@ -35,7 +35,7 @@ public class ProductService {
      * Get product by ID with country-specific visibility check.
      */
     public Mono<Product> getProduct(Long id, String countryCode) {
-        return productRepository.findByIdAndDeletedAtIsNull(id)
+        return productRepository.findByIdAndIsValid(id)
                 .filterWhen(product -> isVisibleInCountry(product.getId(), countryCode))
                 .switchIfEmpty(Mono.error(new BusinessException(
                         ErrorCode.NOT_FOUND, HttpStatus.NOT_FOUND, "Product not found or not available")))
@@ -48,7 +48,7 @@ public class ProductService {
     public Mono<ProductDetail> getProductDetail(Long productId, String countryCode) {
         return getProduct(productId, countryCode)
                 .flatMap(product -> 
-                        skuRepository.findAllByProductIdAndDeletedAtIsNull(productId)
+                        skuRepository.findAllByProductIdAndIsValid(productId)
                                 .filter(sku -> sku.isAvailableInCountry(countryCode))
                                 .filter(Sku::isActive)
                                 .collectList()
@@ -64,7 +64,7 @@ public class ProductService {
                 .map(ProductCountryVisibility::getProductId)
                 .collectList()
                 .flatMapMany(productIds -> 
-                        productRepository.findByStatusAndDeletedAtIsNullOrderByCreatedAtDesc(status)
+                        productRepository.findByProductStatusAndIsValidOrderByCreateTimeDesc(status)
                                 .filter(product -> productIds.contains(product.getId()))
                                 .skip((long) page * size)
                                 .take(size)
@@ -84,7 +84,7 @@ public class ProductService {
      * Get featured products for a country.
      */
     public Flux<Product> getFeaturedProducts(String countryCode, int limit) {
-        return productRepository.findByIsFeaturedTrueAndStatusAndDeletedAtIsNull("ACTIVE")
+        return productRepository.findByIsFeaturedTrueAndProductStatusAndIsValid("ACTIVE")
                 .filterWhen(product -> isVisibleInCountry(product.getId(), countryCode))
                 .take(limit);
     }
@@ -93,7 +93,7 @@ public class ProductService {
      * Get new arrival products for a country.
      */
     public Flux<Product> getNewArrivals(String countryCode, int limit) {
-        return productRepository.findByIsNewArrivalTrueAndStatusAndDeletedAtIsNull("ACTIVE")
+        return productRepository.findByIsNewArrivalTrueAndProductStatusAndIsValid("ACTIVE")
                 .filterWhen(product -> isVisibleInCountry(product.getId(), countryCode))
                 .take(limit);
     }
@@ -102,7 +102,7 @@ public class ProductService {
      * Get products by category for a country.
      */
     public Flux<Product> getProductsByCategory(Long categoryId, String countryCode, int page, int size) {
-        return productRepository.findByCategoryIdAndStatusAndDeletedAtIsNull(categoryId, "ACTIVE")
+        return productRepository.findByCategoryIdAndProductStatusAndIsValid(categoryId, "ACTIVE")
                 .filterWhen(product -> isVisibleInCountry(product.getId(), countryCode))
                 .skip((long) page * size)
                 .take(size);
@@ -123,7 +123,7 @@ public class ProductService {
      */
     @Transactional
     public Mono<Product> updateProduct(Long id, Product updates) {
-        return productRepository.findByIdAndDeletedAtIsNull(id)
+        return productRepository.findByIdAndIsValid(id)
                 .switchIfEmpty(Mono.error(new BusinessException(
                         ErrorCode.NOT_FOUND, HttpStatus.NOT_FOUND, "Product not found")))
                 .flatMap(existing -> {
@@ -131,11 +131,11 @@ public class ProductService {
                     if (updates.getTitle() != null) existing.setTitle(updates.getTitle());
                     if (updates.getDescription() != null) existing.setDescription(updates.getDescription());
                     if (updates.getBasePrice() != null) existing.setBasePrice(updates.getBasePrice());
-                    if (updates.getStatus() != null) existing.setStatus(updates.getStatus());
+                    if (updates.getProductStatus() != null) existing.setProductStatus(updates.getProductStatus());
                     if (updates.getIsFeatured() != null) existing.setIsFeatured(updates.getIsFeatured());
                     if (updates.getIsNewArrival() != null) existing.setIsNewArrival(updates.getIsNewArrival());
                     if (updates.getMainImage() != null) existing.setMainImage(updates.getMainImage());
-                    existing.setUpdatedAt(Instant.now());
+                    existing.setUpdateTime(Instant.now());
                     return productRepository.save(existing);
                 })
                 .doOnSuccess(p -> log.info("Updated product id={}", id));
@@ -146,7 +146,7 @@ public class ProductService {
      */
     @Transactional
     public Mono<Void> deleteProduct(Long id) {
-        return productRepository.findByIdAndDeletedAtIsNull(id)
+        return productRepository.findByIdAndIsValid(id)
                 .switchIfEmpty(Mono.error(new BusinessException(
                         ErrorCode.NOT_FOUND, HttpStatus.NOT_FOUND, "Product not found")))
                 .flatMap(product -> {
@@ -167,7 +167,7 @@ public class ProductService {
                 .flatMap(existing -> {
                     existing.setIsVisible(visible);
                     existing.setIsPurchasable(purchasable);
-                    existing.setUpdatedAt(Instant.now());
+                    existing.setUpdateTime(Instant.now());
                     return visibilityRepository.save(existing);
                 })
                 .switchIfEmpty(Mono.defer(() -> {
@@ -206,7 +206,7 @@ public class ProductService {
      */
     @Transactional
     public Mono<Boolean> reserveStock(Long skuId, int quantity) {
-        return skuRepository.findByIdAndDeletedAtIsNull(skuId)
+        return skuRepository.findByIdAndIsValid(skuId)
                 .filter(sku -> sku.hasEnoughStock(quantity))
                 .flatMap(sku -> skuRepository.reserveStock(skuId, quantity))
                 .map(updated -> updated > 0)

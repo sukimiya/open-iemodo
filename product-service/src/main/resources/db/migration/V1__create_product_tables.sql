@@ -5,7 +5,7 @@
 
 -- ─── brands ──────────────────────────────────────────────────────────────────
 CREATE TABLE IF NOT EXISTS brands (
-    id              BIGSERIAL       PRIMARY KEY,
+    id              BIGINT          PRIMARY KEY,  -- Snowflake ID
     name            VARCHAR(200)    NOT NULL,
     name_localized  JSONB,                          -- {"en": "Apple", "zh": "苹果"}
     logo_url        VARCHAR(500),
@@ -14,15 +14,21 @@ CREATE TABLE IF NOT EXISTS brands (
     country_code    VARCHAR(2),                     -- Brand origin country
     sort_order      INTEGER         DEFAULT 0,
     is_active       BOOLEAN         NOT NULL DEFAULT TRUE,
-    created_at      TIMESTAMPTZ     NOT NULL DEFAULT NOW(),
-    updated_at      TIMESTAMPTZ     NOT NULL DEFAULT NOW()
+    
+    -- BaseEntity audit fields
+    status          INTEGER         NOT NULL DEFAULT 1,
+    create_by       BIGINT,
+    create_time     TIMESTAMPTZ,
+    update_by       BIGINT,
+    update_time     TIMESTAMPTZ,
+    is_valid        INTEGER         NOT NULL DEFAULT 1
 );
 
 CREATE INDEX IF NOT EXISTS idx_brands_active ON brands (is_active);
 
 -- ─── categories ──────────────────────────────────────────────────────────────
 CREATE TABLE IF NOT EXISTS categories (
-    id              BIGSERIAL       PRIMARY KEY,
+    id              BIGINT          PRIMARY KEY,  -- Snowflake ID
     parent_id       BIGINT          REFERENCES categories(id),
     name            VARCHAR(200)    NOT NULL,
     name_localized  JSONB,
@@ -34,8 +40,14 @@ CREATE TABLE IF NOT EXISTS categories (
     sort_order      INTEGER         DEFAULT 0,
     is_active       BOOLEAN         NOT NULL DEFAULT TRUE,
     seo_keywords    VARCHAR(500),
-    created_at      TIMESTAMPTZ     NOT NULL DEFAULT NOW(),
-    updated_at      TIMESTAMPTZ     NOT NULL DEFAULT NOW()
+    
+    -- BaseEntity audit fields
+    status          INTEGER         NOT NULL DEFAULT 1,
+    create_by       BIGINT,
+    create_time     TIMESTAMPTZ,
+    update_by       BIGINT,
+    update_time     TIMESTAMPTZ,
+    is_valid        INTEGER         NOT NULL DEFAULT 1
 );
 
 CREATE INDEX IF NOT EXISTS idx_categories_parent ON categories (parent_id);
@@ -45,7 +57,7 @@ CREATE INDEX IF NOT EXISTS idx_categories_path ON categories (path);
 
 -- ─── products ────────────────────────────────────────────────────────────────
 CREATE TABLE IF NOT EXISTS products (
-    id                  BIGSERIAL       PRIMARY KEY,
+    id                  BIGINT          PRIMARY KEY,  -- Snowflake ID
     product_code        VARCHAR(100)    NOT NULL UNIQUE,  -- 商品编码
     spu_code            VARCHAR(100),                       -- SPU编码
     title               VARCHAR(500)    NOT NULL,
@@ -69,7 +81,7 @@ CREATE TABLE IF NOT EXISTS products (
     market_price        DECIMAL(15,2),                      -- 市场价
     
     -- 状态与特性
-    status              VARCHAR(20)     NOT NULL DEFAULT 'DRAFT',  -- DRAFT/ACTIVE/ARCHIVED
+    product_status      VARCHAR(20)     NOT NULL DEFAULT 'DRAFT',  -- DRAFT/ACTIVE/ARCHIVED
     is_featured         BOOLEAN         NOT NULL DEFAULT FALSE,    -- 是否精选
     is_new_arrival      BOOLEAN         NOT NULL DEFAULT FALSE,    -- 是否新品
     
@@ -91,22 +103,26 @@ CREATE TABLE IF NOT EXISTS products (
     view_count          INTEGER         DEFAULT 0,
     sale_count          INTEGER         DEFAULT 0,
     
-    created_at          TIMESTAMPTZ     NOT NULL DEFAULT NOW(),
-    updated_at          TIMESTAMPTZ     NOT NULL DEFAULT NOW(),
-    deleted_at          TIMESTAMPTZ                         -- 软删除
+    -- BaseEntity audit fields
+    status              INTEGER         NOT NULL DEFAULT 1,
+    create_by           BIGINT,
+    create_time         TIMESTAMPTZ,
+    update_by           BIGINT,
+    update_time         TIMESTAMPTZ,
+    is_valid            INTEGER         NOT NULL DEFAULT 1
 );
 
-CREATE INDEX IF NOT EXISTS idx_products_status ON products (status);
+CREATE INDEX IF NOT EXISTS idx_products_status ON products (product_status);
 CREATE INDEX IF NOT EXISTS idx_products_category ON products (category_id);
 CREATE INDEX IF NOT EXISTS idx_products_brand ON products (brand_id);
 CREATE INDEX IF NOT EXISTS idx_products_featured ON products (is_featured) WHERE is_featured = TRUE;
 CREATE INDEX IF NOT EXISTS idx_products_new ON products (is_new_arrival) WHERE is_new_arrival = TRUE;
-CREATE INDEX IF NOT EXISTS idx_products_deleted ON products (deleted_at) WHERE deleted_at IS NULL;
+CREATE INDEX IF NOT EXISTS idx_products_valid ON products (is_valid) WHERE is_valid = 1;
 CREATE INDEX IF NOT EXISTS idx_products_search ON products USING GIN(search_vector);
 
 -- ─── skus ────────────────────────────────────────────────────────────────────
 CREATE TABLE IF NOT EXISTS skus (
-    id                  BIGSERIAL       PRIMARY KEY,
+    id                  BIGINT          PRIMARY KEY,  -- Snowflake ID
     product_id          BIGINT          NOT NULL REFERENCES products(id) ON DELETE CASCADE,
     sku_code            VARCHAR(100)    NOT NULL UNIQUE,
     barcode             VARCHAR(100),                       -- 条形码
@@ -131,21 +147,25 @@ CREATE TABLE IF NOT EXISTS skus (
     banned_in_countries     VARCHAR(2)[],                   -- 黑名单
     
     -- 状态
-    status              VARCHAR(20)     NOT NULL DEFAULT 'ACTIVE',  -- ACTIVE/OUT_OF_STOCK/DISABLED
+    sku_status          VARCHAR(20)     NOT NULL DEFAULT 'ACTIVE',  -- ACTIVE/OUT_OF_STOCK/DISABLED
     
-    created_at          TIMESTAMPTZ     NOT NULL DEFAULT NOW(),
-    updated_at          TIMESTAMPTZ     NOT NULL DEFAULT NOW(),
-    deleted_at          TIMESTAMPTZ
+    -- BaseEntity audit fields
+    status              INTEGER         NOT NULL DEFAULT 1,
+    create_by           BIGINT,
+    create_time         TIMESTAMPTZ,
+    update_by           BIGINT,
+    update_time         TIMESTAMPTZ,
+    is_valid            INTEGER         NOT NULL DEFAULT 1
 );
 
 CREATE INDEX IF NOT EXISTS idx_skus_product ON skus (product_id);
-CREATE INDEX IF NOT EXISTS idx_skus_status ON skus (status);
+CREATE INDEX IF NOT EXISTS idx_skus_status ON skus (sku_status);
 CREATE INDEX IF NOT EXISTS idx_skus_hash ON skus (attribute_hash);
-CREATE INDEX IF NOT EXISTS idx_skus_deleted ON skus (deleted_at) WHERE deleted_at IS NULL;
+CREATE INDEX IF NOT EXISTS idx_skus_valid ON skus (is_valid) WHERE is_valid = 1;
 
 -- ─── product_media ───────────────────────────────────────────────────────────
 CREATE TABLE IF NOT EXISTS product_media (
-    id              BIGSERIAL       PRIMARY KEY,
+    id              BIGINT          PRIMARY KEY,  -- Snowflake ID
     product_id      BIGINT          NOT NULL REFERENCES products(id) ON DELETE CASCADE,
     media_type      VARCHAR(20)     NOT NULL,           -- IMAGE/VIDEO
     url             VARCHAR(500)    NOT NULL,
@@ -153,7 +173,14 @@ CREATE TABLE IF NOT EXISTS product_media (
     sort_order      INTEGER         DEFAULT 0,
     is_main         BOOLEAN         DEFAULT FALSE,      -- 是否主图
     alt_text        VARCHAR(200),
-    created_at      TIMESTAMPTZ     NOT NULL DEFAULT NOW()
+    
+    -- BaseEntity audit fields
+    status          INTEGER         NOT NULL DEFAULT 1,
+    create_by       BIGINT,
+    create_time     TIMESTAMPTZ,
+    update_by       BIGINT,
+    update_time     TIMESTAMPTZ,
+    is_valid        INTEGER         NOT NULL DEFAULT 1
 );
 
 CREATE INDEX IF NOT EXISTS idx_media_product ON product_media (product_id);
@@ -161,7 +188,7 @@ CREATE INDEX IF NOT EXISTS idx_media_main ON product_media (product_id, is_main)
 
 -- ─── product_regional_prices ─────────────────────────────────────────────────
 CREATE TABLE IF NOT EXISTS product_regional_prices (
-    id              BIGSERIAL       PRIMARY KEY,
+    id              BIGINT          PRIMARY KEY,  -- Snowflake ID
     product_id      BIGINT          NOT NULL REFERENCES products(id) ON DELETE CASCADE,
     sku_id          BIGINT          REFERENCES skus(id) ON DELETE CASCADE,
     country_code    VARCHAR(2)      NOT NULL,
@@ -169,8 +196,14 @@ CREATE TABLE IF NOT EXISTS product_regional_prices (
     price           DECIMAL(15,2)   NOT NULL,
     compare_price   DECIMAL(15,2),                      -- 划线价
     is_active       BOOLEAN         DEFAULT TRUE,
-    created_at      TIMESTAMPTZ     NOT NULL DEFAULT NOW(),
-    updated_at      TIMESTAMPTZ     NOT NULL DEFAULT NOW(),
+    
+    -- BaseEntity audit fields
+    status          INTEGER         NOT NULL DEFAULT 1,
+    create_by       BIGINT,
+    create_time     TIMESTAMPTZ,
+    update_by       BIGINT,
+    update_time     TIMESTAMPTZ,
+    is_valid        INTEGER         NOT NULL DEFAULT 1,
     
     UNIQUE(product_id, sku_id, country_code)
 );
@@ -181,15 +214,21 @@ CREATE INDEX IF NOT EXISTS idx_regional_prices_country ON product_regional_price
 
 -- ─── product_country_visibility ──────────────────────────────────────────────
 CREATE TABLE IF NOT EXISTS product_country_visibility (
-    id                  BIGSERIAL       PRIMARY KEY,
+    id                  BIGINT          PRIMARY KEY,  -- Snowflake ID
     product_id          BIGINT          NOT NULL REFERENCES products(id) ON DELETE CASCADE,
     country_code        VARCHAR(2)      NOT NULL,
     is_visible          BOOLEAN         NOT NULL DEFAULT TRUE,
     is_purchasable      BOOLEAN         NOT NULL DEFAULT TRUE,  -- 是否可购买
     restriction_reason  VARCHAR(200),                           -- 限制原因
     required_certifications VARCHAR(100)[],                     -- 需要的认证
-    created_at          TIMESTAMPTZ     NOT NULL DEFAULT NOW(),
-    updated_at          TIMESTAMPTZ     NOT NULL DEFAULT NOW(),
+    
+    -- BaseEntity audit fields
+    status              INTEGER         NOT NULL DEFAULT 1,
+    create_by           BIGINT,
+    create_time         TIMESTAMPTZ,
+    update_by           BIGINT,
+    update_time         TIMESTAMPTZ,
+    is_valid            INTEGER         NOT NULL DEFAULT 1,
     
     UNIQUE(product_id, country_code)
 );
@@ -199,14 +238,14 @@ CREATE INDEX IF NOT EXISTS idx_visibility_country ON product_country_visibility 
 CREATE INDEX IF NOT EXISTS idx_visibility_visible ON product_country_visibility (country_code, is_visible);
 
 -- ─── Seed data ───────────────────────────────────────────────────────────────
-INSERT INTO brands (name, name_localized, country_code, is_active) VALUES
-    ('Apple', '{"en": "Apple", "zh": "苹果"}', 'US', TRUE),
-    ('Samsung', '{"en": "Samsung", "zh": "三星"}', 'KR', TRUE),
-    ('Sony', '{"en": "Sony", "zh": "索尼"}', 'JP', TRUE)
+INSERT INTO brands (id, name, name_localized, country_code, is_active) VALUES
+    (100001, 'Apple', '{"en": "Apple", "zh": "苹果"}', 'US', TRUE),
+    (100002, 'Samsung', '{"en": "Samsung", "zh": "三星"}', 'KR', TRUE),
+    (100003, 'Sony', '{"en": "Sony", "zh": "索尼"}', 'JP', TRUE)
 ON CONFLICT DO NOTHING;
 
-INSERT INTO categories (name, name_localized, level, path, sort_order, is_active) VALUES
-    ('Electronics', '{"en": "Electronics", "zh": "电子产品"}', 1, '/1', 1, TRUE),
-    ('Clothing', '{"en": "Clothing", "zh": "服装"}', 1, '/2', 2, TRUE),
-    ('Home & Garden', '{"en": "Home & Garden", "zh": "家居园艺"}', 1, '/3', 3, TRUE)
+INSERT INTO categories (id, name, name_localized, level, path, sort_order, is_active) VALUES
+    (100001, 'Electronics', '{"en": "Electronics", "zh": "电子产品"}', 1, '/1', 1, TRUE),
+    (100002, 'Clothing', '{"en": "Clothing", "zh": "服装"}', 1, '/2', 2, TRUE),
+    (100003, 'Home & Garden', '{"en": "Home & Garden", "zh": "家居园艺"}', 1, '/3', 3, TRUE)
 ON CONFLICT DO NOTHING;

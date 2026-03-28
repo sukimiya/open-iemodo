@@ -21,11 +21,11 @@ public interface TenantRepository extends ReactiveCrudRepository<Tenant, Long> {
 
     Mono<Boolean> existsByTenantCode(String tenantCode);
 
-    Flux<Tenant> findAllByStatus(String status);
+    Flux<Tenant> findAllByTenantStatus(String tenantStatus);
 
-    @Query("SELECT * FROM tenants WHERE status = 'ACTIVE' AND deleted_at IS NULL")
+    @Query("SELECT * FROM tenants WHERE tenant_status = 'ACTIVE' AND is_valid = 1")
     Flux<Tenant> findAllActive();
 
-    @Query("SELECT * FROM tenants WHERE status != 'DELETED' ORDER BY created_at DESC LIMIT :limit OFFSET :offset")
+    @Query("SELECT * FROM tenants WHERE tenant_status != 'DELETED' ORDER BY create_time DESC LIMIT :limit OFFSET :offset")
     Flux<Tenant> findAllPaged(int limit, int offset);
 }

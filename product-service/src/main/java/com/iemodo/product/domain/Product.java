@@ -1,12 +1,11 @@
 package com.iemodo.product.domain;
 
+import com.iemodo.common.entity.BaseEntity;
 import lombok.AllArgsConstructor;
-import lombok.Builder;
 import lombok.Data;
+import lombok.EqualsAndHashCode;
 import lombok.NoArgsConstructor;
-import org.springframework.data.annotation.CreatedDate;
-import org.springframework.data.annotation.Id;
-import org.springframework.data.annotation.LastModifiedDate;
+import lombok.experimental.SuperBuilder;
 import org.springframework.data.relational.core.mapping.Table;
 
 import java.math.BigDecimal;
@@ -16,14 +15,13 @@ import java.time.Instant;
  * Product entity - main product information (SPU level).
  */
 @Data
-@Builder
+@SuperBuilder
 @NoArgsConstructor
 @AllArgsConstructor
+@EqualsAndHashCode(callSuper = true)
 @Table("products")
-public class Product {
-
-    @Id
-    private Long id;
+public class Product extends BaseEntity {
+    // id is inherited from BaseEntity
 
     /** Unique product code */
     private String productCode;
@@ -55,7 +53,7 @@ public class Product {
 
     // Status and flags
     /** DRAFT, ACTIVE, ARCHIVED */
-    private String status;
+    private String productStatus;
     
     private Boolean isFeatured;
     private Boolean isNewArrival;
@@ -78,26 +76,18 @@ public class Product {
     private Integer viewCount;
     private Integer saleCount;
 
-    @CreatedDate
-    private Instant createdAt;
-
-    @LastModifiedDate
-    private Instant updatedAt;
-    
-    private Instant deletedAt;
-
     // ─── Domain helpers ────────────────────────────────────────────────────
 
     public boolean isActive() {
-        return "ACTIVE".equals(status) && deletedAt == null;
+        return "ACTIVE".equals(productStatus) && getIsValid() == 1;
     }
 
     public boolean isDraft() {
-        return "DRAFT".equals(status);
+        return "DRAFT".equals(productStatus);
     }
 
     public boolean isArchived() {
-        return "ARCHIVED".equals(status) || deletedAt != null;
+        return "ARCHIVED".equals(productStatus) || getIsValid() == 0;
     }
 
     public boolean isFeatured() {
@@ -109,8 +99,8 @@ public class Product {
     }
 
     public void softDelete() {
-        this.status = "ARCHIVED";
-        this.deletedAt = Instant.now();
+        this.productStatus = "ARCHIVED";
+        setIsValid(0);
     }
 
     public void incrementViewCount() {

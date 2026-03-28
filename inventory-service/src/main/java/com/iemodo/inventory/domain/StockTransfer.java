@@ -1,12 +1,11 @@
 package com.iemodo.inventory.domain;
 
+import com.iemodo.common.entity.BaseEntity;
 import lombok.AllArgsConstructor;
-import lombok.Builder;
 import lombok.Data;
+import lombok.EqualsAndHashCode;
 import lombok.NoArgsConstructor;
-import org.springframework.data.annotation.CreatedDate;
-import org.springframework.data.annotation.Id;
-import org.springframework.data.annotation.LastModifiedDate;
+import lombok.experimental.SuperBuilder;
 import org.springframework.data.relational.core.mapping.Table;
 
 import java.math.BigDecimal;
@@ -16,14 +15,13 @@ import java.time.Instant;
  * Stock transfer entity - represents a movement of stock between warehouses.
  */
 @Data
-@Builder
+@SuperBuilder
 @NoArgsConstructor
 @AllArgsConstructor
+@EqualsAndHashCode(callSuper = true)
 @Table("stock_transfers")
-public class StockTransfer {
-
-    @Id
-    private Long id;
+public class StockTransfer extends BaseEntity {
+    // id is inherited from BaseEntity
 
     private String transferNo;
 
@@ -31,7 +29,7 @@ public class StockTransfer {
     private Long toWarehouseId;
 
     /** Status: PENDING, APPROVED, SHIPPED, RECEIVED, CANCELLED */
-    private String status;
+    private String transferStatus;
 
     // Costs
     private BigDecimal shippingCost;
@@ -51,12 +49,6 @@ public class StockTransfer {
 
     private Long createdBy;
 
-    @CreatedDate
-    private Instant createdAt;
-
-    @LastModifiedDate
-    private Instant updatedAt;
-
     // ─── Domain helpers ────────────────────────────────────────────────────
 
     public enum Status {
@@ -64,38 +56,38 @@ public class StockTransfer {
     }
 
     public boolean canApprove() {
-        return Status.PENDING.name().equals(status);
+        return Status.PENDING.name().equals(transferStatus);
     }
 
     public boolean canShip() {
-        return Status.APPROVED.name().equals(status);
+        return Status.APPROVED.name().equals(transferStatus);
     }
 
     public boolean canReceive() {
-        return Status.SHIPPED.name().equals(status);
+        return Status.SHIPPED.name().equals(transferStatus);
     }
 
     public boolean canCancel() {
-        return Status.PENDING.name().equals(status) || 
-               Status.APPROVED.name().equals(status);
+        return Status.PENDING.name().equals(transferStatus) || 
+               Status.APPROVED.name().equals(transferStatus);
     }
 
     public void approve() {
-        this.status = Status.APPROVED.name();
+        this.transferStatus = Status.APPROVED.name();
         this.approvedAt = Instant.now();
     }
 
     public void ship() {
-        this.status = Status.SHIPPED.name();
+        this.transferStatus = Status.SHIPPED.name();
         this.shippedAt = Instant.now();
     }
 
     public void receive() {
-        this.status = Status.RECEIVED.name();
+        this.transferStatus = Status.RECEIVED.name();
         this.receivedAt = Instant.now();
     }
 
     public void cancel() {
-        this.status = Status.CANCELLED.name();
+        this.transferStatus = Status.CANCELLED.name();
     }
 }

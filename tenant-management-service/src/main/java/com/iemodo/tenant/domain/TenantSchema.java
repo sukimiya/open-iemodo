@@ -1,14 +1,12 @@
 package com.iemodo.tenant.domain;
 
+import com.iemodo.common.entity.BaseEntity;
 import lombok.AllArgsConstructor;
-import lombok.Builder;
 import lombok.Data;
+import lombok.EqualsAndHashCode;
 import lombok.NoArgsConstructor;
-import org.springframework.data.annotation.CreatedDate;
-import org.springframework.data.annotation.Id;
+import lombok.experimental.SuperBuilder;
 import org.springframework.data.relational.core.mapping.Table;
-
-import java.time.Instant;
 
 /**
  * Tenant Schema mapping — maps to the {@code tenant_schemas} table.
@@ -17,14 +15,14 @@ import java.time.Instant;
  * This enables flexible schema-per-service or shared-schema strategies.
  */
 @Data
-@Builder
+@SuperBuilder
 @NoArgsConstructor
 @AllArgsConstructor
+@EqualsAndHashCode(callSuper = true)
 @Table("tenant_schemas")
-public class TenantSchema {
+public class TenantSchema extends BaseEntity {
 
-    @Id
-    private Long id;
+    // id is inherited from BaseEntity
 
     /** Reference to tenant (tenants.tenant_id) */
     private String tenantId;
@@ -37,9 +35,6 @@ public class TenantSchema {
 
     /** Database connection pool name (for multi-database setups) */
     private String connectionPool;
-
-    @CreatedDate
-    private Instant createdAt;
 
     // ─── Convenience factory methods ──────────────────────────────────────
 

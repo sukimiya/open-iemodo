@@ -78,7 +78,7 @@ public class UserService {
                 .phone(user.getPhone())
                 .avatarUrl(user.getAvatarUrl())
                 .oauthProvider(user.getOauthProvider())
-                .status(user.getStatus())
+                .status(user.getStatus() != null && user.getStatus() == 1 ? "ACTIVE" : "DISABLED")
                 .emailVerified(user.getEmailVerified())
                 .phoneVerified(user.getPhoneVerified())
                 .preferredCurrency(user.getPreferredCurrency())
