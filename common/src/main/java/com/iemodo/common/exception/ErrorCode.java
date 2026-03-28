@@ -26,6 +26,16 @@ public enum ErrorCode {
     ORDER_NOT_FOUND(4030, "Order not found"),
     INVALID_ORDER_STATUS(4031, "Invalid order status transition"),
 
+    // ─── Infrastructure errors ───────────────────────────────
+    ENCRYPTION_ERROR(5001, "Encryption operation failed"),
+    MAP_SERVICE_ERROR(5002, "Map service operation failed"),
+    FILE_STORAGE_ERROR(5003, "File storage operation failed"),
+    CACHE_ERROR(5004, "Cache operation failed"),
+
+    // ─── Concurrency errors ─────────────────────────────────
+    CONCURRENT_REQUEST(4090, "Concurrent request detected"),
+    RATE_LIMIT_EXCEEDED(4290, "Rate limit exceeded"),
+
     // ─── Server errors ──────────────────────────────────────
     INTERNAL_ERROR(500, "Internal server error");
 

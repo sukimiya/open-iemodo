@@ -40,8 +40,26 @@ public class UserService {
                     if (request.getDisplayName() != null) {
                         user.setDisplayName(request.getDisplayName());
                     }
+                    if (request.getFirstName() != null) {
+                        user.setFirstName(request.getFirstName());
+                    }
+                    if (request.getLastName() != null) {
+                        user.setLastName(request.getLastName());
+                    }
+                    if (request.getPhone() != null) {
+                        user.setPhone(request.getPhone());
+                    }
                     if (request.getAvatarUrl() != null) {
                         user.setAvatarUrl(request.getAvatarUrl());
+                    }
+                    if (request.getPreferredCurrency() != null) {
+                        user.setPreferredCurrency(request.getPreferredCurrency().toUpperCase());
+                    }
+                    if (request.getPreferredLanguage() != null) {
+                        user.setPreferredLanguage(request.getPreferredLanguage().toLowerCase());
+                    }
+                    if (request.getPreferredCountry() != null) {
+                        user.setPreferredCountry(request.getPreferredCountry().toUpperCase());
                     }
                     return userRepository.save(user);
                 })
@@ -54,10 +72,22 @@ public class UserService {
                 .id(user.getId())
                 .email(user.getEmail())
                 .displayName(user.getDisplayName())
+                .firstName(user.getFirstName())
+                .lastName(user.getLastName())
+                .fullName(user.getFullName())
+                .phone(user.getPhone())
                 .avatarUrl(user.getAvatarUrl())
                 .oauthProvider(user.getOauthProvider())
                 .status(user.getStatus())
+                .emailVerified(user.getEmailVerified())
+                .phoneVerified(user.getPhoneVerified())
+                .preferredCurrency(user.getPreferredCurrency())
+                .preferredLanguage(user.getPreferredLanguage())
+                .preferredCountry(user.getPreferredCountry())
+                .totalOrders(user.getTotalOrders())
+                .totalSpent(user.getTotalSpent())
                 .createdAt(user.getCreatedAt())
+                .updatedAt(user.getUpdatedAt())
                 .build();
     }
 }

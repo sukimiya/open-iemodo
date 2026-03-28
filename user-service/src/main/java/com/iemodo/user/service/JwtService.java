@@ -141,6 +141,23 @@ public class JwtService {
         return props.getRefreshTokenTtlDays();
     }
 
+    /**
+     * Extract user ID from JWT token.
+     */
+    public Long extractUserId(String token) {
+        try {
+            Claims claims = Jwts.parser()
+                    .verifyWith((java.security.interfaces.RSAPublicKey) publicKey)
+                    .build()
+                    .parseSignedClaims(token)
+                    .getPayload();
+            return Long.valueOf(claims.getSubject());
+        } catch (Exception e) {
+            log.warn("Could not extract userId from token: {}", e.getMessage());
+            return null;
+        }
+    }
+
     // ─── Key loading helpers ───────────────────────────────────────────────
 
     private PrivateKey loadPrivateKey(String path) throws Exception {

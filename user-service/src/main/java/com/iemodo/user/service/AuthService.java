@@ -217,10 +217,22 @@ public class AuthService {
                 .id(user.getId())
                 .email(user.getEmail())
                 .displayName(user.getDisplayName())
+                .firstName(user.getFirstName())
+                .lastName(user.getLastName())
+                .fullName(user.getFullName())
+                .phone(user.getPhone())
                 .avatarUrl(user.getAvatarUrl())
                 .oauthProvider(user.getOauthProvider())
                 .status(user.getStatus())
+                .emailVerified(user.getEmailVerified())
+                .phoneVerified(user.getPhoneVerified())
+                .preferredCurrency(user.getPreferredCurrency())
+                .preferredLanguage(user.getPreferredLanguage())
+                .preferredCountry(user.getPreferredCountry())
+                .totalOrders(user.getTotalOrders())
+                .totalSpent(user.getTotalSpent())
                 .createdAt(user.getCreatedAt())
+                .updatedAt(user.getUpdatedAt())
                 .build();
     }
 }

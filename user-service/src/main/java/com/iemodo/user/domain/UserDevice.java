@@ -31,11 +31,17 @@ public class UserDevice {
     /** Opaque device fingerprint provided by the client (e.g. FCM token, browser fingerprint). */
     private String deviceId;
 
+    /** Device type: MOBILE | WEB | TABLET */
+    private String deviceType;
+
     /** Human-readable label: "iPhone 14", "Chrome on macOS", etc. */
     private String deviceName;
 
     private String userAgent;
     private String ipAddress;
+
+    /** Geographic location of last login. */
+    private String lastLocation;
 
     /** Last time this device was seen (updated on each successful auth). */
     private Instant lastSeenAt;

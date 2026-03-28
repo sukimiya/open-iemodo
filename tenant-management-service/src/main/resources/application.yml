@@ -1,0 +1,37 @@
+server:
+  port: 8091
+
+spring:
+  application:
+    name: tenant-management-service
+
+  # R2DBC for reactive database access
+  r2dbc:
+    url: r2dbc:postgresql://localhost:5432/iemodo?schema=tenant_meta
+    username: ${DB_USER:iemodo}
+    password: ${DB_PASS:iemodo}
+
+  # Flyway for schema migrations (uses JDBC, not R2DBC)
+  flyway:
+    url: jdbc:postgresql://localhost:5432/iemodo?currentSchema=tenant_meta
+    user: ${DB_USER:iemodo}
+    password: ${DB_PASS:iemodo}
+    schemas: tenant_meta
+    locations: classpath:db/migration
+    baseline-on-migrate: true
+
+# Logging
+logging:
+  level:
+    com.iemodo.tenant: INFO
+    org.springframework.data.r2dbc: WARN
+
+# Management endpoints
+management:
+  endpoints:
+    web:
+      exposure:
+        include: health,info,metrics
+  endpoint:
+    health:
+      show-details: always
