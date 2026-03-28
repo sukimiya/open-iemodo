@@ -7,7 +7,6 @@ import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.mockito.Mock;
 import org.mockito.MockitoAnnotations;
-import org.springframework.cloud.gateway.route.RouteDefinition;
 import reactor.core.publisher.Flux;
 import reactor.test.StepVerifier;
 
@@ -39,7 +38,7 @@ class DatabaseRouteDefinitionRepositoryTest {
                 .path("/uc/**")
                 .priority(100)
                 .enabled(true)
-                .createdAt(Instant.now())
+                .createTime(Instant.now())
                 .build();
 
         GatewayRoute route2 = GatewayRoute.builder()
@@ -50,7 +49,7 @@ class DatabaseRouteDefinitionRepositoryTest {
                 .method("GET,POST")
                 .priority(100)
                 .enabled(true)
-                .createdAt(Instant.now())
+                .createTime(Instant.now())
                 .build();
 
         when(routeRepository.findAllByEnabledTrueOrderByPriorityAsc())

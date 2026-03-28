@@ -100,4 +100,8 @@ public abstract class BaseEntity {
     public void markNotNew() {
         this.isNew = false;
     }
+
+    public void markNew() {
+        this.isNew = true;
+    }
 }

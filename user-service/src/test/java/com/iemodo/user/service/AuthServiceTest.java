@@ -59,9 +59,9 @@ class AuthServiceTest {
         req.setDisplayName("Alice");
 
         User savedUser = User.builder()
-                .id(1L).email("alice@example.com")
+                .id(1L).tenantId("tenant_001").email("alice@example.com")
                 .displayName("Alice").oauthProvider("LOCAL")
-                .status("ACTIVE").createdAt(Instant.now()).build();
+                .status(1).createTime(Instant.now()).build();
 
         RefreshToken savedRt = RefreshToken.builder()
                 .id(1L).userId(1L)
@@ -107,9 +107,9 @@ class AuthServiceTest {
 
         String hash = passwordEncoder.encode("Correct1!");
         User user = User.builder()
-                .id(2L).email("bob@example.com")
+                .id(2L).tenantId("tenant_001").email("bob@example.com")
                 .passwordHash(hash).oauthProvider("LOCAL")
-                .status("ACTIVE").createdAt(Instant.now()).build();
+                .status(1).createTime(Instant.now()).build();
 
         RefreshToken rt = RefreshToken.builder()
                 .id(2L).userId(2L)
@@ -132,9 +132,9 @@ class AuthServiceTest {
         req.setPassword("WrongPass!");
 
         User user = User.builder()
-                .id(2L).email("bob@example.com")
+                .id(2L).tenantId("tenant_001").email("bob@example.com")
                 .passwordHash(passwordEncoder.encode("CorrectPass1!"))
-                .oauthProvider("LOCAL").status("ACTIVE").build();
+                .oauthProvider("LOCAL").status(1).build();
 
         when(userRepository.findByEmail("bob@example.com")).thenReturn(Mono.just(user));
 

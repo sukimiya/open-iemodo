@@ -4,7 +4,6 @@ import com.iemodo.common.exception.BusinessException;
 import com.iemodo.common.exception.ErrorCode;
 import com.iemodo.tenant.domain.Tenant;
 import com.iemodo.tenant.dto.CreateTenantRequest;
-import com.iemodo.tenant.dto.TenantDTO;
 import com.iemodo.tenant.repository.TenantConfigRepository;
 import com.iemodo.tenant.repository.TenantRepository;
 import com.iemodo.tenant.repository.TenantSchemaRepository;
@@ -47,9 +46,9 @@ class TenantServiceTest {
                 .tenantId("acme-corp")
                 .tenantName("Acme Corporation")
                 .tenantCode("acme")
-                .status("ACTIVE")
+                .tenantStatus("ACTIVE")
                 .planType("STANDARD")
-                .createdAt(Instant.now())
+                .createTime(Instant.now())
                 .build();
 
         when(tenantRepository.findByTenantId("acme-corp")).thenReturn(Mono.just(tenant));
@@ -75,7 +74,8 @@ class TenantServiceTest {
                 .verify();
     }
 
-    @Test
+    @SuppressWarnings("null")
+@Test
     @DisplayName("createTenant: should create tenant when id not taken")
     void createTenant_shouldSucceed_whenIdNotTaken() {
         CreateTenantRequest request = new CreateTenantRequest();
@@ -89,9 +89,9 @@ class TenantServiceTest {
                 .tenantId("new-corp")
                 .tenantName("New Corporation")
                 .tenantCode("new")
-                .status("ACTIVE")
+                .tenantStatus("ACTIVE")
                 .planType("PROFESSIONAL")
-                .createdAt(Instant.now())
+                .createTime(Instant.now())
                 .build();
 
         when(tenantRepository.existsByTenantId("new-corp")).thenReturn(Mono.just(false));
@@ -109,20 +109,23 @@ class TenantServiceTest {
                 .verifyComplete();
     }
 
-    @Test
+    @SuppressWarnings("null")
+@Test
     @DisplayName("suspendTenant: should suspend active tenant")
     void suspendTenant_shouldSucceed_whenActive() {
         Tenant tenant = Tenant.builder()
                 .id(1L)
                 .tenantId("acme-corp")
-                .status("ACTIVE")
+                .tenantStatus("ACTIVE")
                 .build();
 
         Tenant suspendedTenant = Tenant.builder()
                 .id(1L)
                 .tenantId("acme-corp")
-                .status("SUSPENDED")
+                .tenantStatus("SUSPENDED")
                 .build();
+
+
 
         when(tenantRepository.findByTenantId("acme-corp")).thenReturn(Mono.just(tenant));
         when(tenantRepository.save(any(Tenant.class))).thenReturn(Mono.just(suspendedTenant));

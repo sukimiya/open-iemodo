@@ -45,7 +45,7 @@ class ProductServiceTest {
                 .id(1L)
                 .productCode("PROD-001")
                 .title("Test Product")
-                .status("ACTIVE")
+                .productStatus("ACTIVE")
                 .basePrice(new BigDecimal("99.99"))
                 .build();
 
@@ -67,7 +67,7 @@ class ProductServiceTest {
                 .id(1L)
                 .productCode("PROD-001")
                 .title("Test Product")
-                .status("ACTIVE")
+                .productStatus("ACTIVE")
                 .build();
 
         when(productRepository.findByIdAndDeletedAtIsNull(1L)).thenReturn(Mono.just(product));
@@ -80,7 +80,8 @@ class ProductServiceTest {
                 .verify();
     }
 
-    @Test
+    @SuppressWarnings("null")
+@Test
     @DisplayName("createProduct: should create product with valid code")
     void createProduct_shouldSucceed_withValidCode() {
         Product product = Product.builder()
@@ -96,7 +97,8 @@ class ProductServiceTest {
                 .title("New Product")
                 .basePrice(new BigDecimal("49.99"))
                 .categoryId(1L)
-                .createdAt(Instant.now())
+                .createTime(Instant.now())
+                .productStatus("ACTIVE")
                 .build();
 
         when(productRepository.existsByProductCode("PROD-NEW")).thenReturn(Mono.just(false));
@@ -128,14 +130,15 @@ class ProductServiceTest {
                 .verify();
     }
 
-    @Test
+    @SuppressWarnings("null")
+@Test
     @DisplayName("deleteProduct: should soft delete product")
     void deleteProduct_shouldSoftDelete() {
         Product product = Product.builder()
                 .id(1L)
                 .productCode("PROD-001")
                 .title("Test Product")
-                .status("ACTIVE")
+                .productStatus("ACTIVE")
                 .build();
 
         when(productRepository.findByIdAndDeletedAtIsNull(1L)).thenReturn(Mono.just(product));
@@ -153,7 +156,7 @@ class ProductServiceTest {
                 .skuCode("SKU-001")
                 .stockQuantity(100)
                 .reservedQuantity(0)
-                .status("ACTIVE")
+                .skuStatus("ACTIVE")
                 .build();
 
         when(skuRepository.findByIdAndDeletedAtIsNull(1L)).thenReturn(Mono.just(sku));
@@ -172,7 +175,7 @@ class ProductServiceTest {
                 .skuCode("SKU-001")
                 .stockQuantity(3)
                 .reservedQuantity(0)
-                .status("ACTIVE")
+                .skuStatus("ACTIVE")
                 .build();
 
         when(skuRepository.findByIdAndDeletedAtIsNull(1L)).thenReturn(Mono.just(sku));
@@ -185,10 +188,10 @@ class ProductServiceTest {
     @Test
     @DisplayName("getFeaturedProducts: should return featured products")
     void getFeaturedProducts_shouldReturnFeatured() {
-        Product p1 = Product.builder().id(1L).productCode("P1").isFeatured(true).status("ACTIVE").build();
-        Product p2 = Product.builder().id(2L).productCode("P2").isFeatured(true).status("ACTIVE").build();
+        Product p1 = Product.builder().id(1L).productCode("P1").isFeatured(true).productStatus("ACTIVE").build();
+        Product p2 = Product.builder().id(2L).productCode("P2").isFeatured(true).productStatus("ACTIVE").build();
 
-        when(productRepository.findByIsFeaturedTrueAndStatusAndDeletedAtIsNull("ACTIVE"))
+        when(productRepository.findByIsFeaturedTrueAndProductStatusAndIsValid("ACTIVE"))
                 .thenReturn(Flux.just(p1, p2));
         when(visibilityRepository.isVisibleInCountry(anyLong(), eq("US"))).thenReturn(Mono.just(true));
 

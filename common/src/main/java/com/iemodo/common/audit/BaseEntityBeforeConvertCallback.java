@@ -31,7 +31,8 @@ public class BaseEntityBeforeConvertCallback implements BeforeConvertCallback<Ba
         if (entity.getId() == null) {
             long id = idWorker.nextId();
             entity.setId(id);
-            entity.markNotNew(); // 默认为新增
+            entity.markNew();
+            // 保持 isNew=true（默认值），让 BeforeSaveCallback 正确识别为新增
             log.debug("Generated snowflake ID: {} for table: {}", id, table);
         } else {
             // 如果ID不为空，说明是更新操作

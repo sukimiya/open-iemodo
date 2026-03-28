@@ -13,7 +13,6 @@ import org.mockito.junit.jupiter.MockitoExtension;
 import reactor.core.publisher.Mono;
 import reactor.test.StepVerifier;
 
-import java.math.BigDecimal;
 import java.util.List;
 
 import static org.mockito.ArgumentMatchers.*;
@@ -87,7 +86,8 @@ class FulfillmentServiceTest {
                 .verifyComplete();
     }
 
-    @Test
+    @SuppressWarnings("null")
+@Test
     void generateRestockRecommendations_Success() {
         StockTransferRecommendation rec = StockTransferRecommendation.builder()
                 .recommendationNo("REC-001")
@@ -107,7 +107,8 @@ class FulfillmentServiceTest {
                 .verifyComplete();
     }
 
-    @Test
+    @SuppressWarnings("null")
+@Test
     void executeStockTransfer_Success() {
         StockTransferRecommendation recommendation = StockTransferRecommendation.builder()
                 .id(1L)
@@ -116,7 +117,7 @@ class FulfillmentServiceTest {
                 .toWarehouseId(2L)
                 .sku("SKU-001")
                 .recommendedQuantity(100)
-                .status(StockTransferRecommendation.Status.APPROVED)
+                .recommendationStatus(StockTransferRecommendation.RecommendationStatus.APPROVED.getValue())
                 .build();
         
         when(recommendationRepository.findById(1L))

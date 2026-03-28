@@ -7,7 +7,6 @@ import com.iemodo.order.domain.Order;
 import com.iemodo.order.domain.OrderItem;
 import com.iemodo.order.domain.OrderStatus;
 import com.iemodo.order.dto.CreateOrderRequest;
-import com.iemodo.order.dto.OrderDTO;
 import com.iemodo.order.repository.OrderItemRepository;
 import com.iemodo.order.repository.OrderRepository;
 import org.junit.jupiter.api.BeforeEach;
@@ -66,11 +65,11 @@ class OrderServiceTest {
                 .orderNo("ORD20260321000001")
                 .tenantId("tenant_001")
                 .customerId(1L)
-                .status(OrderStatus.PENDING_PAYMENT)
+                .orderStatus(OrderStatus.PENDING_PAYMENT)
                 .totalAmount(new BigDecimal("39.98"))
                 .currency("USD")
-                .createdAt(Instant.now())
-                .updatedAt(Instant.now())
+                .createTime(Instant.now())
+                .updateTime(Instant.now())
                 .build();
     }
 
@@ -85,7 +84,8 @@ class OrderServiceTest {
 
     // ─── Create order ──────────────────────────────────────────────────────
 
-    @Test
+    @SuppressWarnings({ "null", "unchecked" })
+@Test
     @DisplayName("createOrder: should succeed when Redis stock is available")
     void createOrder_shouldSucceed_whenStockAvailable() {
         when(inventoryRedisService.preDeduct(anyString(), anyString(), anyInt()))
@@ -97,7 +97,7 @@ class OrderServiceTest {
         StepVerifier.create(orderService.createOrder(buildRequest(), "tenant_001"))
                 .assertNext(dto -> {
                     assertThat(dto.getOrderNo()).startsWith("ORD");
-                    assertThat(dto.getStatus()).isEqualTo(OrderStatus.PENDING_PAYMENT);
+                    assertThat(dto.getOrderStatus()).isEqualTo(OrderStatus.PENDING_PAYMENT);
                     assertThat(dto.getTotalAmount()).isEqualByComparingTo("39.98");
                 })
                 .verifyComplete();
@@ -149,7 +149,8 @@ class OrderServiceTest {
 
     // ─── Cancel order ─────────────────────────────────────────────────────
 
-    @Test
+    @SuppressWarnings("null")
+@Test
     @DisplayName("cancelOrder: should cancel PENDING_PAYMENT order and rollback Redis")
     void cancelOrder_shouldCancel_whenPendingPayment() {
         Order order = savedOrder(); // status = PENDING_PAYMENT
@@ -160,7 +161,7 @@ class OrderServiceTest {
                 .thenReturn(Mono.empty());
 
         StepVerifier.create(orderService.cancelOrder(1L, "tenant_001"))
-                .assertNext(dto -> assertThat(dto.getStatus()).isEqualTo(OrderStatus.CANCELLED))
+                .assertNext(dto -> assertThat(dto.getOrderStatus()).isEqualTo(OrderStatus.CANCELLED))
                 .verifyComplete();
     }
 
@@ -168,7 +169,7 @@ class OrderServiceTest {
     @DisplayName("cancelOrder: should fail with INVALID_ORDER_STATUS when already cancelled")
     void cancelOrder_shouldFail_whenAlreadyCancelled() {
         Order cancelled = savedOrder();
-        cancelled.setStatus(OrderStatus.CANCELLED);
+        cancelled.setOrderStatus(OrderStatus.CANCELLED);
         when(orderRepository.findById(1L)).thenReturn(Mono.just(cancelled));
 
         StepVerifier.create(orderService.cancelOrder(1L, "tenant_001"))

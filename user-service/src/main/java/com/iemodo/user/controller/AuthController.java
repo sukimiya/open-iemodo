@@ -130,8 +130,8 @@ public class AuthController {
      */
     @GetMapping("/oauth2/callback/{provider}")
     public Mono<Response<TokenResponse>> oauth2Callback(
-            @PathVariable String provider,
-            @RequestParam String code,
+            @PathVariable("provider") String provider,
+            @RequestParam("code") String code,
             @RequestHeader("X-TenantID") String tenantId) {
 
         // Delegate to AuthService which handles provider-specific token exchange.

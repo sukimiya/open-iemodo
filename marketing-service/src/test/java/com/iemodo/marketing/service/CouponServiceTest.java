@@ -46,7 +46,7 @@ class CouponServiceTest {
                 .validTo(Instant.now().plusSeconds(3600))
                 .build();
 
-        when(couponRepository.findByCouponCodeAndTenantIdAndDeletedAtIsNull(anyString(), anyString()))
+        when(couponRepository.findByCouponCodeAndTenantIdAndIsValid(anyString(), anyString()))
                 .thenReturn(Mono.just(coupon));
 
         CalculateDiscountRequest request = new CalculateDiscountRequest();
@@ -71,7 +71,7 @@ class CouponServiceTest {
                 .validTo(Instant.now().plusSeconds(3600))
                 .build();
 
-        when(couponRepository.findByCouponCodeAndTenantIdAndDeletedAtIsNull(anyString(), anyString()))
+        when(couponRepository.findByCouponCodeAndTenantIdAndIsValid(anyString(), anyString()))
                 .thenReturn(Mono.just(coupon));
 
         CalculateDiscountRequest request = new CalculateDiscountRequest();
@@ -96,7 +96,7 @@ class CouponServiceTest {
                 .validTo(Instant.now().plusSeconds(3600))
                 .build();
 
-        when(couponRepository.findByCouponCodeAndTenantIdAndDeletedAtIsNull(anyString(), anyString()))
+        when(couponRepository.findByCouponCodeAndTenantIdAndIsValid(anyString(), anyString()))
                 .thenReturn(Mono.just(coupon));
 
         ValidateCouponRequest request = new ValidateCouponRequest();
@@ -120,7 +120,7 @@ class CouponServiceTest {
                 .validTo(Instant.now().plusSeconds(3600))
                 .build();
 
-        when(couponRepository.findByCouponCodeAndTenantIdAndDeletedAtIsNull(anyString(), anyString()))
+        when(couponRepository.findByCouponCodeAndTenantIdAndIsValid(anyString(), anyString()))
                 .thenReturn(Mono.just(coupon));
 
         ValidateCouponRequest request = new ValidateCouponRequest();

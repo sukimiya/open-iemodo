@@ -43,4 +43,6 @@ public interface ProductRepository extends ReactiveCrudRepository<Product, Long>
 
     @Query("UPDATE products SET sale_count = sale_count + :quantity WHERE id = :id")
     Mono<Integer> incrementSaleCount(Long id, int quantity);
+
+    Object findByIdAndDeletedAtIsNull(long l);
 }

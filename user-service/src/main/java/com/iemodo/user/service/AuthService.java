@@ -50,6 +50,7 @@ public class AuthService {
                                 ErrorCode.USER_ALREADY_EXISTS, HttpStatus.CONFLICT));
                     }
                     User user = User.builder()
+                            .tenantId(tenantId)
                             .email(request.getEmail())
                             .passwordHash(passwordEncoder.encode(request.getPassword()))
                             .displayName(request.getDisplayName() != null
@@ -147,6 +148,7 @@ public class AuthService {
                                 .switchIfEmpty(Mono.defer(() -> {
                                     // New OAuth2 user
                                     User newUser = User.builder()
+                                            .tenantId(tenantId)
                                             .email(email)
                                             .oauthProvider(provider)
                                             .oauthSubject(subject)

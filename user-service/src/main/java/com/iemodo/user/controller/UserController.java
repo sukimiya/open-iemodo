@@ -49,7 +49,7 @@ public class UserController {
      * Admin endpoint — returns any user by ID.
      */
     @GetMapping("/{userId}")
-    public Mono<Response<UserDTO>> getUserById(@PathVariable Long userId) {
+    public Mono<Response<UserDTO>> getUserById(@PathVariable("userId") Long userId) {
         return userService.getUser(userId).map(Response::success);
     }
 }

@@ -37,4 +37,6 @@ public interface SkuRepository extends ReactiveCrudRepository<Sku, Long> {
 
     @Query("UPDATE skus SET reserved_quantity = GREATEST(0, reserved_quantity - :quantity) WHERE id = :id")
     Mono<Integer> releaseStock(Long id, int quantity);
+
+    Object findByIdAndDeletedAtIsNull(long l);
 }

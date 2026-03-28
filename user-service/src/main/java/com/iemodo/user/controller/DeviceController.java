@@ -64,7 +64,7 @@ public class DeviceController {
     public Mono<Response<Void>> revokeDevice(
             @RequestHeader("Authorization") String authHeader,
             @RequestHeader("X-TenantID") String tenantId,
-            @PathVariable String deviceId) {
+            @PathVariable("deviceId") String deviceId) {
         Long userId = extractUserId(authHeader);
         return deviceService.revokeDevice(userId, deviceId)
                 .then(Mono.just(Response.success()));

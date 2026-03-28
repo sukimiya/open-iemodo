@@ -57,7 +57,7 @@ public class AddressController {
     public Mono<Response<AddressDTO>> getAddress(
             @RequestHeader("Authorization") String authHeader,
             @RequestHeader("X-TenantID") String tenantId,
-            @PathVariable Long addressId) {
+            @PathVariable("addressId") Long addressId) {
         Long userId = extractUserId(authHeader);
         return addressService.getAddress(userId, addressId)
                 .map(Response::success);
@@ -83,7 +83,7 @@ public class AddressController {
     public Mono<Response<Void>> deleteAddress(
             @RequestHeader("Authorization") String authHeader,
             @RequestHeader("X-TenantID") String tenantId,
-            @PathVariable Long addressId) {
+            @PathVariable("addressId") Long addressId) {
         Long userId = extractUserId(authHeader);
         return addressService.deleteAddress(userId, addressId)
                 .then(Mono.just(Response.success()));
@@ -96,7 +96,7 @@ public class AddressController {
     public Mono<Response<AddressDTO>> setDefaultAddress(
             @RequestHeader("Authorization") String authHeader,
             @RequestHeader("X-TenantID") String tenantId,
-            @PathVariable Long addressId) {
+            @PathVariable("addressId") Long addressId) {
         Long userId = extractUserId(authHeader);
         return addressService.setDefaultAddress(userId, addressId)
                 .map(Response::success);
