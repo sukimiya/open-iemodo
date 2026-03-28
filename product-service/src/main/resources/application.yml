@@ -1,0 +1,60 @@
+server:
+  port: 8082
+
+spring:
+  application:
+    name: product-service
+
+  # R2DBC for reactive database access
+  r2dbc:
+    url: r2dbc:postgresql://localhost:5432/iemodo
+    username: ${DB_USER:iemodo}
+    password: ${DB_PASS:iemodo}
+    pool:
+      max-size: 10
+      initial-size: 2
+
+  # Flyway for schema migrations
+  flyway:
+    url: jdbc:postgresql://localhost:5432/iemodo
+    user: ${DB_USER:iemodo}
+    password: ${DB_PASS:iemodo}
+    locations: classpath:db/migration
+    baseline-on-migrate: true
+
+  # Redis for caching
+  data:
+    redis:
+      host: ${REDIS_HOST:localhost}
+      port: ${REDIS_PORT:6379}
+      password: ${REDIS_PASSWORD:redis123}
+      lettuce:
+        pool:
+          max-active: 8
+          max-idle: 4
+
+# Custom properties
+iemodo:
+  product:
+    cache:
+      product-ttl: 3600      # Product cache TTL in seconds
+      category-ttl: 7200     # Category cache TTL in seconds
+    search:
+      default-page-size: 20
+      max-page-size: 100
+
+# Logging
+logging:
+  level:
+    com.iemodo.product: INFO
+    org.springframework.data.r2dbc: WARN
+
+# Management endpoints
+management:
+  endpoints:
+    web:
+      exposure:
+        include: health,info,metrics
+  endpoint:
+    health:
+      show-details: always
