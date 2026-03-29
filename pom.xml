@@ -28,6 +28,7 @@
         <module>fulfillment-service</module>
         <module>rma-service</module>
         <module>review-service</module>
+        <module>notification-service</module>
     </modules>
 
     <properties>
@@ -155,6 +156,20 @@
                                 <artifactId>lombok</artifactId>
                             </exclude>
                         </excludes>
+                    </configuration>
+                </plugin>
+                <plugin>
+                    <groupId>org.apache.maven.plugins</groupId>
+                    <artifactId>maven-surefire-plugin</artifactId>
+                    <version>3.5.4</version>
+                    <configuration>
+                        <!-- Required for Mockito/ByteBuddy inline mocking on JDK 21+ -->
+                        <argLine>
+                            -XX:+EnableDynamicAgentLoading
+                            -Djdk.attach.allowAttachSelf=true
+                            --add-opens java.base/java.lang=ALL-UNNAMED
+                            --add-opens java.base/java.util=ALL-UNNAMED
+                        </argLine>
                     </configuration>
                 </plugin>
                 <plugin>
