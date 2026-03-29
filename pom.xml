@@ -26,6 +26,8 @@
         <module>map-service</module>
         <module>marketing-service</module>
         <module>fulfillment-service</module>
+        <module>rma-service</module>
+        <module>review-service</module>
     </modules>
 
     <properties>

@@ -25,6 +25,10 @@ public enum ErrorCode {
     TOKEN_INVALID(4014, "Token is invalid"),
     ORDER_NOT_FOUND(4030, "Order not found"),
     INVALID_ORDER_STATUS(4031, "Invalid order status transition"),
+    RMA_NOT_FOUND(4040, "RMA request not found"),
+    INVALID_RMA_TRANSITION(4041, "Invalid RMA status transition"),
+    RETURN_WINDOW_EXPIRED(4042, "Return window has expired for this region"),
+    RMA_ALREADY_EXISTS(4043, "An active RMA already exists for this order item"),
 
     // ─── Infrastructure errors ───────────────────────────────
     ENCRYPTION_ERROR(5001, "Encryption operation failed"),

@@ -105,6 +105,30 @@ spring:
           predicates:
             - Path=/ff/**
 
+        # Review Service: /review/**
+        - id: review-service-route
+          uri: lb://review-service
+          predicates:
+            - Path=/review/**
+          filters:
+            - name: RequestRateLimiter
+              args:
+                redis-rate-limiter.replenishRate: 100
+                redis-rate-limiter.burstCapacity: 200
+                redis-rate-limiter.requestedTokens: 1
+
+        # RMA Service: /rma/**
+        - id: rma-service-route
+          uri: lb://rma-service
+          predicates:
+            - Path=/rma/**
+          filters:
+            - name: RequestRateLimiter
+              args:
+                redis-rate-limiter.replenishRate: 50
+                redis-rate-limiter.burstCapacity: 100
+                redis-rate-limiter.requestedTokens: 1
+
         # Swagger API Docs aggregation
         - id: user-service-api-docs
           uri: lb://user-service

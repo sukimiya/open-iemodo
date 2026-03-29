@@ -1,0 +1,57 @@
+server:
+  port: 8095
+
+spring:
+  application:
+    name: rma-service
+
+  config:
+    import: "nacos:rma-service.yaml?group=IEMODO&refreshEnabled=true"
+
+  cloud:
+    nacos:
+      server-addr: ${NACOS_SERVER_ADDR:localhost:8848}
+      discovery:
+        group: IEMODO
+      config:
+        group: IEMODO
+        file-extension: yaml
+
+  flyway:
+    enabled: true
+    url: jdbc:postgresql://${DB_HOST:localhost}:${DB_PORT:5433}/${DB_NAME:iemodo}
+    user: ${DB_USERNAME:iemodo}
+    password: ${DB_PASSWORD:iemodo123}
+    schemas: schema_tenant_001,schema_tenant_002
+    locations: classpath:db/migration
+    baseline-on-migrate: true
+
+iemodo:
+  tenants:
+    - id: tenant_001
+      type: SCHEMA
+      schema: schema_tenant_001
+      host: ${DB_HOST:localhost}
+      port: ${DB_PORT:5433}
+      database: ${DB_NAME:iemodo}
+      username: ${DB_USERNAME:iemodo}
+      password: ${DB_PASSWORD:iemodo123}
+    - id: tenant_002
+      type: SCHEMA
+      schema: schema_tenant_002
+      host: ${DB_HOST:localhost}
+      port: ${DB_PORT:5433}
+      database: ${DB_NAME:iemodo}
+      username: ${DB_USERNAME:iemodo}
+      password: ${DB_PASSWORD:iemodo123}
+
+management:
+  endpoints:
+    web:
+      exposure:
+        include: health,info,metrics
+
+logging:
+  level:
+    com.iemodo: DEBUG
+    org.flywaydb: INFO
