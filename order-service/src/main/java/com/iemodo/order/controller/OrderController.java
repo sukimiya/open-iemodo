@@ -5,6 +5,7 @@ import com.iemodo.common.response.Response;
 import com.iemodo.order.domain.OrderStatus;
 import com.iemodo.order.dto.CreateOrderRequest;
 import com.iemodo.order.dto.OrderDTO;
+import com.iemodo.order.dto.OrderTokenResponse;
 import com.iemodo.order.service.OrderService;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
@@ -25,6 +26,25 @@ import reactor.core.publisher.Mono;
 public class OrderController {
 
     private final OrderService orderService;
+
+    /**
+     * Issue an idempotency token (pre-generated orderNo) for a new order.
+     *
+     * <pre>
+     * POST /oc/api/v1/orders/token
+     * X-TenantID: tenant_001
+     * </pre>
+     *
+     * The returned {@code idempotencyKey} must be included in the subsequent
+     * {@code POST /orders} request. It expires in 10 minutes.
+     */
+    @PostMapping("/token")
+    public Mono<Response<OrderTokenResponse>> getOrderToken(
+            @RequestHeader("X-TenantID") String tenantId) {
+
+        return orderService.generateOrderToken(tenantId)
+                .map(Response::success);
+    }
 
     /**
      * Create a new order.

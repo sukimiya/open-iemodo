@@ -7,6 +7,7 @@ import org.springframework.data.redis.core.script.DefaultRedisScript;
 import org.springframework.stereotype.Service;
 import reactor.core.publisher.Mono;
 
+import java.time.Duration;
 import java.util.List;
 
 /**
@@ -52,12 +53,38 @@ public class InventoryRedisService {
             end
             """;
 
+    /**
+     * Lua script for idempotency state check.
+     *
+     * <p>Return codes:
+     * <ul>
+     *   <li>{@code  1} — PENDING (token exists, proceed with deduction)</li>
+     *   <li>{@code  2} — SUCCESS (already processed, duplicate request)</li>
+     *   <li>{@code -1} — NOT_FOUND (token expired or never registered)</li>
+     * </ul>
+     */
+    private static final String IDEMPOTENCY_CHECK_LUA = """
+            local state = redis.call('get', KEYS[1])
+            if not state then
+                return -1
+            end
+            if state == 'SUCCESS' then
+                return 2
+            end
+            return 1
+            """;
+
     private static final DefaultRedisScript<Long> DEDUCT_SCRIPT;
+    private static final DefaultRedisScript<Long> IDEMPOTENCY_SCRIPT;
 
     static {
         DEDUCT_SCRIPT = new DefaultRedisScript<>();
         DEDUCT_SCRIPT.setScriptText(DEDUCT_LUA);
         DEDUCT_SCRIPT.setResultType(Long.class);
+
+        IDEMPOTENCY_SCRIPT = new DefaultRedisScript<>();
+        IDEMPOTENCY_SCRIPT.setScriptText(IDEMPOTENCY_CHECK_LUA);
+        IDEMPOTENCY_SCRIPT.setResultType(Long.class);
     }
 
     private final ReactiveStringRedisTemplate redisTemplate;
@@ -66,10 +93,48 @@ public class InventoryRedisService {
         this.redisTemplate = redisTemplate;
     }
 
-    // ─── Stock key builder ────────────────────────────────────────────────
+    // ─── Key builders ─────────────────────────────────────────────────────
 
     public static String stockKey(String tenantId, String sku) {
         return "stock:" + tenantId + ":" + sku;
+    }
+
+    public static String deductKey(String tenantId, String orderNo) {
+        return "deduct:" + tenantId + ":" + orderNo;
+    }
+
+    // ─── Idempotency token ────────────────────────────────────────────────
+
+    /**
+     * Register a fresh idempotency token with PENDING state (10 min TTL).
+     * Call this when issuing a token to the client before order creation.
+     */
+    public Mono<Void> registerToken(String tenantId, String orderNo) {
+        return redisTemplate.opsForValue()
+                .set(deductKey(tenantId, orderNo), "PENDING", Duration.ofMinutes(10))
+                .then();
+    }
+
+    /**
+     * Check the idempotency state for an order.
+     *
+     * @return {@code 1} = PENDING (proceed), {@code 2} = SUCCESS (duplicate),
+     *         {@code -1} = NOT_FOUND (token expired or invalid)
+     */
+    public Mono<Long> checkIdempotency(String tenantId, String orderNo) {
+        return redisTemplate.execute(IDEMPOTENCY_SCRIPT, List.of(deductKey(tenantId, orderNo)), List.of())
+                .next()
+                .defaultIfEmpty(-1L);
+    }
+
+    /**
+     * Mark the idempotency token as successfully processed (24 h TTL).
+     * Call this after all inventory deductions and order persistence succeed.
+     */
+    public Mono<Void> markSuccess(String tenantId, String orderNo) {
+        return redisTemplate.opsForValue()
+                .set(deductKey(tenantId, orderNo), "SUCCESS", Duration.ofHours(24))
+                .then();
     }
 
     // ─── Pre-deduct ───────────────────────────────────────────────────────

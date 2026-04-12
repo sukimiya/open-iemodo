@@ -10,6 +10,7 @@ import com.iemodo.order.domain.OrderStatus;
 import com.iemodo.order.dto.CreateOrderRequest;
 import com.iemodo.order.dto.OrderDTO;
 import com.iemodo.order.dto.OrderItemDTO;
+import com.iemodo.order.dto.OrderTokenResponse;
 import com.iemodo.order.repository.OrderDelayTaskRepository;
 import com.iemodo.order.repository.OrderItemRepository;
 import com.iemodo.order.repository.OrderRepository;
@@ -64,8 +65,12 @@ public class OrderService {
 
     @Transactional
     public Mono<OrderDTO> createOrder(CreateOrderRequest req, String tenantId) {
+        // 0. Idempotency check — if a token was provided, validate it first
+        Mono<Void> idempotencyGuard = validateIdempotencyToken(req, tenantId);
+
         // 1. Pre-deduct each SKU in Redis (sequential to avoid partial success)
-        return preDeductAll(req, tenantId)
+        return idempotencyGuard
+                .then(preDeductAll(req, tenantId))
                 // 2. Build and save Order
                 .then(Mono.defer(() -> {
                     Order order = buildOrder(req, tenantId);
@@ -81,13 +86,26 @@ public class OrderService {
                                 return savedOrder;
                             });
                 })
-                // 4. Schedule payment timeout task
+                // 4. Mark idempotency token as SUCCESS
+                .flatMap(order -> {
+                    if (req.getIdempotencyKey() == null) return Mono.just(order);
+                    return inventoryRedisService.markSuccess(tenantId, req.getIdempotencyKey())
+                            .thenReturn(order);
+                })
+                // 5. Schedule payment timeout task
                 .flatMap(order -> orderDelayTaskRepository.save(buildDelayTask(order)).thenReturn(order))
-                // 5. Convert to DTO
+                // 6. Convert to DTO
                 .map(this::toDTO)
                 .doOnSuccess(dto -> log.info("Created order={} tenant={}", dto.getOrderNo(), tenantId))
-                // 5. Rollback Redis on any error
+                // On error: rollback Redis inventory (idempotency token stays PENDING until TTL expires)
                 .onErrorResume(ex -> rollbackAll(req, tenantId).then(Mono.error(ex)));
+    }
+
+    /** Issue a pre-registered idempotency token (orderNo) for the client to use at order creation. */
+    public Mono<OrderTokenResponse> generateOrderToken(String tenantId) {
+        String orderNo = generateOrderNo();
+        return inventoryRedisService.registerToken(tenantId, orderNo)
+                .thenReturn(new OrderTokenResponse(orderNo));
     }
 
     // ─── Get ──────────────────────────────────────────────────────────────
@@ -214,6 +232,33 @@ public class OrderService {
 
     // ─── Helpers ──────────────────────────────────────────────────────────
 
+    /**
+     * Validates the idempotency token from the request.
+     * <ul>
+     *   <li>PENDING  → ok, proceed with order creation</li>
+     *   <li>SUCCESS  → duplicate request; fetch and return the existing order</li>
+     *   <li>NOT_FOUND → token expired or never issued; reject with error</li>
+     * </ul>
+     */
+    private Mono<Void> validateIdempotencyToken(CreateOrderRequest req, String tenantId) {
+        if (req.getIdempotencyKey() == null) return Mono.empty();
+
+        return inventoryRedisService.checkIdempotency(tenantId, req.getIdempotencyKey())
+                .flatMap(state -> {
+                    if (state == 1L) return Mono.empty(); // PENDING — proceed
+                    if (state == 2L) {                    // SUCCESS — duplicate
+                        log.info("Duplicate order request, idempotencyKey={}", req.getIdempotencyKey());
+                        return Mono.error(new BusinessException(
+                                ErrorCode.DUPLICATE_ORDER, HttpStatus.CONFLICT,
+                                "Order already created for idempotency key: " + req.getIdempotencyKey()));
+                    }
+                    // NOT_FOUND — token expired or invalid
+                    return Mono.error(new BusinessException(
+                            ErrorCode.INVALID_IDEMPOTENCY_TOKEN, HttpStatus.UNPROCESSABLE_ENTITY,
+                            "Idempotency token not found or expired: " + req.getIdempotencyKey()));
+                });
+    }
+
     private Mono<Void> preDeductAll(CreateOrderRequest req, String tenantId) {
         return Flux.fromIterable(req.getItems())
                 .concatMap(item -> inventoryRedisService.preDeduct(
@@ -233,8 +278,9 @@ public class OrderService {
                 .map(i -> i.getUnitPrice().multiply(BigDecimal.valueOf(i.getQuantity())))
                 .reduce(BigDecimal.ZERO, BigDecimal::add);
 
+        String orderNo = req.getIdempotencyKey() != null ? req.getIdempotencyKey() : generateOrderNo();
         return Order.builder()
-                .orderNo(generateOrderNo())
+                .orderNo(orderNo)
                 .tenantId(tenantId)
                 .customerId(req.getCustomerId())
                 .orderStatus(OrderStatus.PENDING_PAYMENT)

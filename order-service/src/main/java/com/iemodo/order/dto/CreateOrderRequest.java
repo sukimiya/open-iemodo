@@ -10,6 +10,13 @@ import java.util.List;
 @Data
 public class CreateOrderRequest {
 
+    /**
+     * Idempotency token obtained from {@code POST /orders/token}.
+     * When provided, duplicate requests with the same token return the original order.
+     */
+    @Size(max = 64, message = "idempotencyKey must not exceed 64 characters")
+    private String idempotencyKey;
+
     @NotNull(message = "customerId is required")
     private Long customerId;
 

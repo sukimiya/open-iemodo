@@ -25,6 +25,8 @@ public enum ErrorCode {
     TOKEN_INVALID(4014, "Token is invalid"),
     ORDER_NOT_FOUND(4030, "Order not found"),
     INVALID_ORDER_STATUS(4031, "Invalid order status transition"),
+    DUPLICATE_ORDER(4032, "Order already created for this idempotency key"),
+    INVALID_IDEMPOTENCY_TOKEN(4033, "Idempotency token not found or expired"),
     RMA_NOT_FOUND(4040, "RMA request not found"),
     INVALID_RMA_TRANSITION(4041, "Invalid RMA status transition"),
     RETURN_WINDOW_EXPIRED(4042, "Return window has expired for this region"),
