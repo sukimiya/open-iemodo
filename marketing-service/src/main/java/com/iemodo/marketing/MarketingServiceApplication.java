@@ -3,6 +3,7 @@ package com.iemodo.marketing;
 import org.springframework.boot.SpringApplication;
 import org.springframework.boot.autoconfigure.SpringBootApplication;
 import org.springframework.context.annotation.ComponentScan;
+import org.springframework.scheduling.annotation.EnableScheduling;
 
 /**
  * Marketing Service Application
@@ -11,6 +12,7 @@ import org.springframework.context.annotation.ComponentScan;
  * Provides coupon and promotion management services
  */
 @SpringBootApplication
+@EnableScheduling
 @ComponentScan(basePackages = {
         "com.iemodo.marketing",
         "com.iemodo.common"

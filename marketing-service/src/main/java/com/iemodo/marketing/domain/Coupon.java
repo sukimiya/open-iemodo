@@ -10,6 +10,7 @@ import org.springframework.data.relational.core.mapping.Column;
 import org.springframework.data.relational.core.mapping.Table;
 
 import java.math.BigDecimal;
+import java.math.RoundingMode;
 import java.time.Instant;
 
 /**
@@ -127,11 +128,13 @@ public class Coupon extends BaseEntity {
         }
         
         if (type == CouponType.PERCENTAGE) {
-            BigDecimal discount = orderAmount.multiply(discountValue);
+            // discountValue is a percentage (e.g. 20 = 20%), divide by 100 before multiplying
+            BigDecimal discount = orderAmount.multiply(
+                    discountValue.divide(new BigDecimal("100"), 4, RoundingMode.HALF_UP));
             if (maxDiscountAmount != null) {
                 discount = discount.min(maxDiscountAmount);
             }
-            return discount;
+            return discount.setScale(2, RoundingMode.HALF_UP);
         }
         
         return BigDecimal.ZERO;

@@ -64,4 +64,14 @@ public interface CouponService {
      * Use coupon (mark as used)
      */
     Mono<Void> useCoupon(Long userCouponId, Long orderId, String orderNo, java.math.BigDecimal discountAmount);
+
+    /**
+     * Publish (activate) a coupon immediately
+     */
+    Mono<CouponResponse> publishCoupon(Long id, String tenantId);
+
+    /**
+     * Unpublish (deactivate) a coupon
+     */
+    Mono<CouponResponse> unpublishCoupon(Long id, String tenantId);
 }

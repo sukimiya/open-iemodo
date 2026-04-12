@@ -53,7 +53,7 @@ public class CouponServiceImpl implements CouponService {
                             .excludedIds(request.getExcludedIds())
                             .validFrom(request.getValidFrom())
                             .validTo(request.getValidTo())
-                            .isActive(true)
+                            .isActive(Boolean.TRUE.equals(request.getIsActive()))
                             .tenantId(tenantId)
                             .build();
                     
@@ -234,6 +234,36 @@ public class CouponServiceImpl implements CouponService {
                             });
                 })
                 .then();
+    }
+
+    @Override
+    @Transactional
+    public Mono<CouponResponse> publishCoupon(Long id, String tenantId) {
+        return couponRepository.findById(id)
+                .filter(coupon -> tenantId.equals(coupon.getTenantId()))
+                .switchIfEmpty(Mono.error(new BusinessException(
+                        ErrorCode.NOT_FOUND, HttpStatus.NOT_FOUND, "Coupon not found")))
+                .flatMap(coupon -> {
+                    coupon.setIsActive(true);
+                    return couponRepository.save(coupon);
+                })
+                .map(this::mapToResponse)
+                .doOnSuccess(r -> log.info("Published coupon: {}", id));
+    }
+
+    @Override
+    @Transactional
+    public Mono<CouponResponse> unpublishCoupon(Long id, String tenantId) {
+        return couponRepository.findById(id)
+                .filter(coupon -> tenantId.equals(coupon.getTenantId()))
+                .switchIfEmpty(Mono.error(new BusinessException(
+                        ErrorCode.NOT_FOUND, HttpStatus.NOT_FOUND, "Coupon not found")))
+                .flatMap(coupon -> {
+                    coupon.setIsActive(false);
+                    return couponRepository.save(coupon);
+                })
+                .map(this::mapToResponse)
+                .doOnSuccess(r -> log.info("Unpublished coupon: {}", id));
     }
 
     // ─── Helper methods ───────────────────────────────────────────────────

@@ -31,4 +31,11 @@ public interface CouponRepository extends ReactiveCrudRepository<Coupon, Long> {
            "AND type = :type AND is_active = true AND is_valid = 1 " +
            "ORDER BY create_time DESC")
     Flux<Coupon> findByType(String tenantId, String type);
+
+    /**
+     * Find draft coupons whose valid_from has arrived and should be auto-published
+     */
+    @Query("SELECT * FROM coupons WHERE is_active = false AND is_valid = 1 " +
+           "AND valid_from <= :now AND valid_to > :now")
+    Flux<Coupon> findScheduledToActivate(Instant now);
 }

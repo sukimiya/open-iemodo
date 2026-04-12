@@ -32,6 +32,7 @@ public class PricingServiceImpl implements PricingService {
     private final RegionalPricingConfigRepository pricingConfigRepository;
     private final CurrencyRepository currencyRepository;
     private final R2dbcEntityTemplate r2dbcTemplate;
+    private final PricingGuard pricingGuard;
 
     // Base currency for all calculations
     private static final String BASE_CURRENCY = "USD";
@@ -277,18 +278,18 @@ public class PricingServiceImpl implements PricingService {
             String customerSegment,
             List<PriceComponent> components,
             String currency) {
-        
+
         return applySegmentDiscount(price, sku, customerSegment)
                 .map(segmentPrice -> {
                     BigDecimal segmentDiscount = price.subtract(segmentPrice);
                     if (segmentDiscount.compareTo(BigDecimal.ZERO) > 0) {
-                        components.add(new PriceComponent("SEGMENT_DISCOUNT", 
-                                segmentDiscount.negate(), 
+                        components.add(new PriceComponent("SEGMENT_DISCOUNT",
+                                segmentDiscount.negate(),
                                 "Customer segment discount: " + customerSegment));
                     }
-                    
+
                     // Build final detail
-                    return PriceDetail.builder()
+                    PriceDetail detail = PriceDetail.builder()
                             .currency(currency)
                             .basePrice(components.get(0).getAmount())
                             .components(components)
@@ -300,6 +301,8 @@ public class PricingServiceImpl implements PricingService {
                                     .negate())
                             .finalPrice(segmentPrice)
                             .build();
+
+                    return pricingGuard.validate(detail, sku);
                 });
     }
 

@@ -94,6 +94,24 @@ public class CouponController {
                 .map(Response::success);
     }
 
+    @PostMapping("/coupons/{id}/publish")
+    public Mono<Response<CouponResponse>> publishCoupon(
+            @PathVariable Long id,
+            @RequestHeader(value = "X-TenantID", defaultValue = "tenant_001") String tenantId) {
+
+        return couponService.publishCoupon(id, tenantId)
+                .map(Response::success);
+    }
+
+    @PostMapping("/coupons/{id}/unpublish")
+    public Mono<Response<CouponResponse>> unpublishCoupon(
+            @PathVariable Long id,
+            @RequestHeader(value = "X-TenantID", defaultValue = "tenant_001") String tenantId) {
+
+        return couponService.unpublishCoupon(id, tenantId)
+                .map(Response::success);
+    }
+
     @PostMapping("/coupons/validate")
     public Mono<Response<CouponValidationResult>> validateCoupon(
             @RequestBody ValidateCouponRequest request,

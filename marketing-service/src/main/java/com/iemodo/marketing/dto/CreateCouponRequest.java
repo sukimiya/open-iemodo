@@ -48,4 +48,12 @@ public class CreateCouponRequest {
 
     @NotNull(message = "Valid to is required")
     private Instant validTo;
+
+    /**
+     * Whether to publish the coupon immediately.
+     * Defaults to {@code false} — coupon is created as a draft and goes live
+     * either via {@code POST /coupons/{id}/publish} or automatically when
+     * {@code valid_from} is reached.
+     */
+    private Boolean isActive;
 }

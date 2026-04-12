@@ -57,17 +57,41 @@ spring:
           predicates:
             - Path=/pc/**
 
-        # Payment Service: /pay/**
+        # Payment Service: /pay/** — lower burst capacity; financial operations
         - id: payment-service-route
           uri: lb://payment-service
           predicates:
             - Path=/pay/**
+          filters:
+            - name: RequestRateLimiter
+              args:
+                redis-rate-limiter.replenishRate: 100
+                redis-rate-limiter.burstCapacity: 200
+                redis-rate-limiter.requestedTokens: 1
+
+        # Inventory Service: /inv/**
+        - id: inventory-service-route
+          uri: lb://inventory-service
+          predicates:
+            - Path=/inv/**
+          filters:
+            - name: RequestRateLimiter
+              args:
+                redis-rate-limiter.replenishRate: 300
+                redis-rate-limiter.burstCapacity: 600
+                redis-rate-limiter.requestedTokens: 1
 
         # Pricing Service: /pricing/**
         - id: pricing-service-route
           uri: lb://pricing-service
           predicates:
             - Path=/pricing/**
+          filters:
+            - name: RequestRateLimiter
+              args:
+                redis-rate-limiter.replenishRate: 200
+                redis-rate-limiter.burstCapacity: 400
+                redis-rate-limiter.requestedTokens: 1
 
         # Tax Service: /tax/**
         - id: tax-service-route
@@ -170,6 +194,13 @@ spring:
           filters:
             - RewritePath=/inventory-service/(?<segment>.*), /${segment}
 
+        - id: marketing-service-api-docs
+          uri: lb://marketing-service
+          predicates:
+            - Path=/marketing-service/v3/api-docs
+          filters:
+            - RewritePath=/marketing-service/(?<segment>.*), /${segment}
+
         - id: payment-service-api-docs
           uri: lb://payment-service
           predicates:
@@ -197,13 +228,6 @@ spring:
             - Path=/map-service/v3/api-docs
           filters:
             - RewritePath=/map-service/(?<segment>.*), /${segment}
-
-        - id: marketing-service-api-docs
-          uri: lb://marketing-service
-          predicates:
-            - Path=/marketing-service/v3/api-docs
-          filters:
-            - RewritePath=/marketing-service/(?<segment>.*), /${segment}
 
         - id: file-service-api-docs
           uri: lb://file-service
