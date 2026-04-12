@@ -33,6 +33,13 @@
             <artifactId>r2dbc-postgresql</artifactId>
         </dependency>
 
+        <!-- R2DBC proxy — used for slow-query detection and circuit breaking -->
+        <dependency>
+            <groupId>io.r2dbc</groupId>
+            <artifactId>r2dbc-proxy</artifactId>
+            <version>1.1.5.RELEASE</version>
+        </dependency>
+
         <!-- Validation -->
         <dependency>
             <groupId>org.springframework.boot</groupId>

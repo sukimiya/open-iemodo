@@ -1,7 +1,12 @@
 package com.iemodo.common.tenant;
 
+import com.iemodo.common.db.CircuitBreakerConnectionFactory;
+import com.iemodo.common.db.SlowQueryCircuitBreaker;
+import com.iemodo.common.db.SlowQueryProxyListener;
+import com.iemodo.common.db.SlowQueryProperties;
 import io.r2dbc.postgresql.PostgresqlConnectionConfiguration;
 import io.r2dbc.postgresql.PostgresqlConnectionFactory;
+import io.r2dbc.proxy.ProxyConnectionFactory;
 import io.r2dbc.spi.ConnectionFactory;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.boot.context.properties.EnableConfigurationProperties;
@@ -40,13 +45,26 @@ import java.util.Map;
  */
 @Slf4j
 @Configuration
-@EnableConfigurationProperties(TenantProperties.class)
+@EnableConfigurationProperties({TenantProperties.class, SlowQueryProperties.class})
 public class MultitenantR2dbcConfiguration {
 
     private final TenantProperties tenantProperties;
+    private final SlowQueryProperties slowQueryProperties;
 
-    public MultitenantR2dbcConfiguration(TenantProperties tenantProperties) {
+    public MultitenantR2dbcConfiguration(TenantProperties tenantProperties,
+                                          SlowQueryProperties slowQueryProperties) {
         this.tenantProperties = tenantProperties;
+        this.slowQueryProperties = slowQueryProperties;
+    }
+
+    @Bean
+    public SlowQueryCircuitBreaker slowQueryCircuitBreaker() {
+        return new SlowQueryCircuitBreaker(slowQueryProperties);
+    }
+
+    @Bean
+    public SlowQueryProxyListener slowQueryProxyListener() {
+        return new SlowQueryProxyListener(slowQueryProperties, slowQueryCircuitBreaker());
     }
 
     // ─── Connection factory ───────────────────────────────────────────────
@@ -147,6 +165,15 @@ public class MultitenantR2dbcConfiguration {
             builder.schema(cfg.getSchema());
         }
 
-        return new PostgresqlConnectionFactory(builder.build());
+        // Layer 1: real PostgreSQL connection factory
+        ConnectionFactory pgFactory = new PostgresqlConnectionFactory(builder.build());
+
+        // Layer 2: r2dbc-proxy for slow-query timing and logging
+        ConnectionFactory proxyFactory = ProxyConnectionFactory.builder(pgFactory)
+                .listener(slowQueryProxyListener())
+                .build();
+
+        // Layer 3: circuit breaker gate — rejects connections when circuit is OPEN
+        return new CircuitBreakerConnectionFactory(proxyFactory, slowQueryCircuitBreaker());
     }
 }

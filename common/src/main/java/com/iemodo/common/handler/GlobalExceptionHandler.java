@@ -4,6 +4,7 @@ import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.SerializationFeature;
 import com.fasterxml.jackson.datatype.jsr310.JavaTimeModule;
+import com.iemodo.common.db.SlowQueryCircuitOpenException;
 import com.iemodo.common.exception.BusinessException;
 import com.iemodo.common.exception.ErrorCode;
 import com.iemodo.common.response.Response;
@@ -44,6 +45,13 @@ public class GlobalExceptionHandler implements WebExceptionHandler {
     public Mono<Void> handle(ServerWebExchange exchange, Throwable ex) {
         ServerHttpResponse response = exchange.getResponse();
         response.getHeaders().setContentType(MediaType.APPLICATION_JSON);
+
+        if (ex instanceof SlowQueryCircuitOpenException) {
+            log.error("[CIRCUIT_OPEN] DB circuit breaker rejected request: {}", ex.getMessage());
+            response.setStatusCode(HttpStatus.SERVICE_UNAVAILABLE);
+            return writeResponse(response, Response.error(
+                    HttpStatus.SERVICE_UNAVAILABLE.value(), "Service temporarily unavailable, please retry later"));
+        }
 
         if (ex instanceof BusinessException be) {
             log.warn("Business exception [{}]: {}", be.getErrorCode(), be.getMessage());
