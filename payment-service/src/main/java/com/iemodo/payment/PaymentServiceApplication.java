@@ -3,6 +3,7 @@ package com.iemodo.payment;
 import org.springframework.boot.SpringApplication;
 import org.springframework.boot.autoconfigure.SpringBootApplication;
 import org.springframework.context.annotation.ComponentScan;
+import org.springframework.scheduling.annotation.EnableScheduling;
 
 /**
  * Payment Service Application
@@ -11,6 +12,7 @@ import org.springframework.context.annotation.ComponentScan;
  * Provides payment processing with Stripe/PayPal integration
  */
 @SpringBootApplication
+@EnableScheduling
 @ComponentScan(basePackages = {
         "com.iemodo.payment",
         "com.iemodo.common"

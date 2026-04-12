@@ -53,4 +53,11 @@ public interface PaymentRepository extends ReactiveCrudRepository<Payment, Long>
 
     @Query("UPDATE payments SET refunded_amount = refunded_amount + :amount, status = :newStatus, update_time = NOW() WHERE id = :id")
     Mono<Integer> addRefundAmount(Long id, java.math.BigDecimal amount, String newStatus);
+
+    /**
+     * Find payments stuck in PENDING or PROCESSING with a known third-party transaction ID,
+     * created before {@code cutoff}. Used by the reconciliation job to detect lost webhooks.
+     */
+    @Query("SELECT * FROM payments WHERE payment_status IN ('PENDING', 'PROCESSING') AND create_time < :cutoff AND third_party_txn_id IS NOT NULL AND is_valid = 1")
+    Flux<Payment> findStuckPayments(Instant cutoff);
 }

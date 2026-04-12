@@ -1,6 +1,8 @@
 package com.iemodo.payment.domain;
 
 import com.iemodo.common.entity.BaseEntity;
+import com.iemodo.common.exception.BusinessException;
+import com.iemodo.common.exception.ErrorCode;
 import lombok.AllArgsConstructor;
 import lombok.Data;
 import lombok.EqualsAndHashCode;
@@ -9,10 +11,12 @@ import lombok.experimental.SuperBuilder;
 import org.springframework.data.annotation.Transient;
 import org.springframework.data.relational.core.mapping.Column;
 import org.springframework.data.relational.core.mapping.Table;
+import org.springframework.http.HttpStatus;
 
 import java.math.BigDecimal;
 import java.time.Instant;
 import java.util.Map;
+import java.util.Set;
 
 /**
  * Payment entity representing a payment transaction.
@@ -107,16 +111,37 @@ public class Payment extends BaseEntity {
     }
 
     /**
-     * Payment status
+     * Payment status with formal state machine transitions.
+     *
+     * <pre>
+     * PENDING ──► PROCESSING ──► SUCCESS ──► REFUNDED
+     *    │              │            │
+     *    └──► FAILED    └──► FAILED  └──► PARTIALLY_REFUNDED ──► REFUNDED
+     *    └──► CANCELLED └──► CANCELLED
+     * </pre>
      */
     public enum PaymentStatus {
-        PENDING,        // Created, awaiting payment
-        PROCESSING,     // Payment in progress
-        SUCCESS,        // Payment completed
-        FAILED,         // Payment failed
-        CANCELLED,      // Cancelled by user or system
-        REFUNDED,       // Fully refunded
-        PARTIALLY_REFUNDED  // Partially refunded
+        PENDING,             // Created, awaiting payment
+        PROCESSING,          // Payment in progress
+        SUCCESS,             // Payment completed
+        FAILED,              // Payment failed
+        CANCELLED,           // Cancelled by user or system
+        REFUNDED,            // Fully refunded
+        PARTIALLY_REFUNDED;  // Partially refunded
+
+        public boolean canTransitionTo(PaymentStatus next) {
+            return allowedTransitions().contains(next);
+        }
+
+        private Set<PaymentStatus> allowedTransitions() {
+            return switch (this) {
+                case PENDING             -> Set.of(PROCESSING, SUCCESS, FAILED, CANCELLED);
+                case PROCESSING          -> Set.of(SUCCESS, FAILED, CANCELLED);
+                case SUCCESS             -> Set.of(REFUNDED, PARTIALLY_REFUNDED);
+                case PARTIALLY_REFUNDED  -> Set.of(REFUNDED, PARTIALLY_REFUNDED);
+                case FAILED, CANCELLED, REFUNDED -> Set.of();
+            };
+        }
     }
 
     /**
@@ -180,6 +205,18 @@ public class Payment extends BaseEntity {
      */
     public boolean isExpired() {
         return expiredAt != null && Instant.now().isAfter(expiredAt);
+    }
+
+    /**
+     * Validated status transition — throws if the move is not allowed by the state machine.
+     */
+    public void transitionTo(PaymentStatus next) {
+        if (!this.paymentStatus.canTransitionTo(next)) {
+            throw new BusinessException(
+                    ErrorCode.INVALID_PAYMENT_STATUS, HttpStatus.UNPROCESSABLE_ENTITY,
+                    String.format("Cannot transition payment from %s to %s", paymentStatus, next));
+        }
+        this.paymentStatus = next;
     }
 
     /**

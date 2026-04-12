@@ -3,10 +3,13 @@ package com.iemodo.payment.service;
 import com.iemodo.common.exception.BusinessException;
 import com.iemodo.common.exception.ErrorCode;
 import com.iemodo.payment.domain.Payment;
+import com.iemodo.payment.domain.PaymentCallbackLog;
 import com.iemodo.payment.domain.Refund;
 import com.iemodo.payment.dto.*;
+import com.iemodo.payment.repository.PaymentCallbackLogRepository;
 import com.iemodo.payment.repository.PaymentRepository;
 import com.iemodo.payment.repository.RefundRepository;
+import org.springframework.dao.DataIntegrityViolationException;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.http.HttpStatus;
@@ -31,6 +34,7 @@ public class PaymentService {
     private final PaymentRepository paymentRepository;
     private final RefundRepository refundRepository;
     private final StripePaymentProvider stripeProvider;
+    private final PaymentCallbackLogRepository callbackLogRepository;
 
     private static final Duration PAYMENT_EXPIRATION = Duration.ofMinutes(30);
 
@@ -302,7 +306,11 @@ public class PaymentService {
     }
 
     /**
-     * Handle Stripe webhook
+     * Handle Stripe webhook — idempotent via {@code payment_callback_log}.
+     *
+     * <p>Each event is persisted with a UNIQUE constraint on {@code event_id} before
+     * processing. A duplicate delivery raises {@link DataIntegrityViolationException},
+     * which is caught and silently dropped, guaranteeing exactly-once processing.
      */
     @Transactional
     public Mono<Void> handleStripeWebhook(String payload, String signature) {
@@ -310,21 +318,32 @@ public class PaymentService {
                 .flatMap(event -> {
                     log.info("Processing Stripe webhook: {}", event.type());
 
-                    switch (event.type()) {
-                        case "payment_intent.succeeded" -> {
-                            return handlePaymentSuccess(event.paymentIntentId(), event);
-                        }
-                        case "payment_intent.payment_failed" -> {
-                            return handlePaymentFailure(event.paymentIntentId(), event);
-                        }
-                        case "charge.refunded", "refund.updated" -> {
-                            return handleRefundUpdate(event);
-                        }
-                        default -> {
-                            return Mono.empty();
-                        }
+                    if (event.eventId() == null) {
+                        return dispatchWebhookEvent(event);
                     }
+
+                    PaymentCallbackLog callbackLog = PaymentCallbackLog.builder()
+                            .eventId(event.eventId())
+                            .eventType(event.type())
+                            .paymentIntentId(event.paymentIntentId())
+                            .build();
+
+                    return callbackLogRepository.save(callbackLog)
+                            .flatMap(saved -> dispatchWebhookEvent(event))
+                            .onErrorResume(DataIntegrityViolationException.class, ex -> {
+                                log.info("Duplicate webhook event ignored: {}", event.eventId());
+                                return Mono.empty();
+                            });
                 });
+    }
+
+    private Mono<Void> dispatchWebhookEvent(PaymentProvider.WebhookEvent event) {
+        return switch (event.type()) {
+            case "payment_intent.succeeded"       -> handlePaymentSuccess(event.paymentIntentId(), event);
+            case "payment_intent.payment_failed"  -> handlePaymentFailure(event.paymentIntentId(), event);
+            case "charge.refunded", "refund.updated" -> handleRefundUpdate(event);
+            default -> Mono.empty();
+        };
     }
 
     private Mono<Void> handlePaymentSuccess(String paymentIntentId, PaymentProvider.WebhookEvent event) {
