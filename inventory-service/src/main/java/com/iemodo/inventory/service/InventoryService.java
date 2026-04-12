@@ -58,7 +58,7 @@ public class InventoryService {
      * Reserve stock for an order (pre-deduct).
      */
     @Transactional
-    public Mono<Boolean> reserveStock(Long warehouseId, Long skuId, int quantity, String orderNo) {
+    public Mono<Boolean> reserveStock(String tenantId, Long warehouseId, Long skuId, int quantity, String orderNo) {
         return inventoryRepository.findByWarehouseIdAndSkuId(warehouseId, skuId)
                 .filter(inv -> inv.hasEnoughStock(quantity))
                 .flatMap(inv -> {
@@ -85,9 +85,13 @@ public class InventoryService {
                             .map(tx -> true);
                 })
                 .defaultIfEmpty(false)
+                // Sync Redis: sellable decreases by quantity
+                .flatMap(result -> result
+                        ? syncCacheFor(tenantId, warehouseId, skuId).thenReturn(true)
+                        : Mono.just(false))
                 .doOnSuccess(result -> {
                     if (result) {
-                        log.info("Reserved {} stock for SKU {} in warehouse {}, order {}", 
+                        log.info("Reserved {} stock for SKU {} in warehouse {}, order {}",
                                 quantity, skuId, warehouseId, orderNo);
                     }
                 });
@@ -97,7 +101,7 @@ public class InventoryService {
      * Release reserved stock (order cancelled).
      */
     @Transactional
-    public Mono<Boolean> releaseStock(Long warehouseId, Long skuId, int quantity, String orderNo) {
+    public Mono<Boolean> releaseStock(String tenantId, Long warehouseId, Long skuId, int quantity, String orderNo) {
         return inventoryRepository.findByWarehouseIdAndSkuId(warehouseId, skuId)
                 .flatMap(inv -> {
                     return inventoryRepository.decreaseReserved(warehouseId, skuId, quantity)
@@ -121,9 +125,13 @@ public class InventoryService {
                             .map(tx -> true);
                 })
                 .defaultIfEmpty(false)
+                // Sync Redis: sellable increases by quantity
+                .flatMap(result -> result
+                        ? syncCacheFor(tenantId, warehouseId, skuId).thenReturn(true)
+                        : Mono.just(false))
                 .doOnSuccess(result -> {
                     if (result) {
-                        log.info("Released {} stock for SKU {} in warehouse {}, order {}", 
+                        log.info("Released {} stock for SKU {} in warehouse {}, order {}",
                                 quantity, skuId, warehouseId, orderNo);
                     }
                 });
@@ -166,7 +174,7 @@ public class InventoryService {
      * Inbound stock.
      */
     @Transactional
-    public Mono<Inventory> inbound(Long warehouseId, Long skuId, int quantity, String referenceNo, String reason) {
+    public Mono<Inventory> inbound(String tenantId, Long warehouseId, Long skuId, int quantity, String referenceNo, String reason) {
         return inventoryRepository.findByWarehouseIdAndSkuId(warehouseId, skuId)
                 .switchIfEmpty(createNewInventory(warehouseId, skuId))
                 .flatMap(inv -> {
@@ -190,7 +198,10 @@ public class InventoryService {
                                         .then(getInventory(warehouseId, skuId));
                             });
                 })
-                .doOnSuccess(inv -> log.info("Inbound {} stock for SKU {} in warehouse {}", 
+                // Sync Redis: sellable increases by quantity (available up, reserved unchanged)
+                .flatMap(updated -> cacheService.setStock(tenantId, skuId, updated.getSellable())
+                        .thenReturn(updated))
+                .doOnSuccess(inv -> log.info("Inbound {} stock for SKU {} in warehouse {}",
                         quantity, skuId, warehouseId));
     }
 
@@ -198,12 +209,12 @@ public class InventoryService {
      * Adjust stock (manual correction).
      */
     @Transactional
-    public Mono<Inventory> adjust(Long warehouseId, Long skuId, int newQuantity, String reason) {
+    public Mono<Inventory> adjust(String tenantId, Long warehouseId, Long skuId, int newQuantity, String reason) {
         return inventoryRepository.findByWarehouseIdAndSkuId(warehouseId, skuId)
                 .switchIfEmpty(createNewInventory(warehouseId, skuId))
                 .flatMap(inv -> {
                     int delta = newQuantity - inv.getTotal();
-                    
+
                     return inventoryRepository.increaseAvailable(warehouseId, skuId, delta)
                             .filter(updated -> updated > 0)
                             .flatMap(updated -> {
@@ -221,7 +232,10 @@ public class InventoryService {
                                 return transactionRepository.save(tx)
                                         .then(getInventory(warehouseId, skuId));
                             });
-                });
+                })
+                // Sync Redis: re-fetch gives authoritative sellable after adjust
+                .flatMap(updated -> cacheService.setStock(tenantId, skuId, updated.getSellable())
+                        .thenReturn(updated));
     }
 
     /**
@@ -239,6 +253,19 @@ public class InventoryService {
     }
 
     // ─── Helper methods ────────────────────────────────────────────────────
+
+    /**
+     * Re-fetches the current inventory from DB and writes the authoritative
+     * sellable quantity to Redis. Called after any mutation that changes sellable.
+     *
+     * <p>Using setStock (absolute write) instead of increment/decrement avoids
+     * drift when Redis was cold or partially inconsistent.
+     */
+    private Mono<Void> syncCacheFor(String tenantId, Long warehouseId, Long skuId) {
+        return inventoryRepository.findByWarehouseIdAndSkuId(warehouseId, skuId)
+                .flatMap(inv -> cacheService.setStock(tenantId, skuId, inv.getSellable()))
+                .then();
+    }
 
     private Mono<Inventory> createNewInventory(Long warehouseId, Long skuId) {
         Inventory inv = Inventory.builder()

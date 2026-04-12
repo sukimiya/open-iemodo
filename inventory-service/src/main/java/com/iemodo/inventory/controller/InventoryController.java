@@ -64,21 +64,23 @@ public class InventoryController {
 
     @PostMapping("/inventory/reserve")
     public Mono<Response<Boolean>> reserveStock(
+            @RequestHeader("X-TenantID") String tenantId,
             @RequestParam Long warehouseId,
             @RequestParam Long skuId,
             @RequestParam int quantity,
             @RequestParam String orderNo) {
-        return inventoryService.reserveStock(warehouseId, skuId, quantity, orderNo)
+        return inventoryService.reserveStock(tenantId, warehouseId, skuId, quantity, orderNo)
                 .map(Response::success);
     }
 
     @PostMapping("/inventory/release")
     public Mono<Response<Boolean>> releaseStock(
+            @RequestHeader("X-TenantID") String tenantId,
             @RequestParam Long warehouseId,
             @RequestParam Long skuId,
             @RequestParam int quantity,
             @RequestParam String orderNo) {
-        return inventoryService.releaseStock(warehouseId, skuId, quantity, orderNo)
+        return inventoryService.releaseStock(tenantId, warehouseId, skuId, quantity, orderNo)
                 .map(Response::success);
     }
 
@@ -94,12 +96,13 @@ public class InventoryController {
 
     @PostMapping("/inventory/inbound")
     public Mono<Response<Inventory>> inbound(
+            @RequestHeader("X-TenantID") String tenantId,
             @RequestParam Long warehouseId,
             @RequestParam Long skuId,
             @RequestParam int quantity,
             @RequestParam(required = false) String referenceNo,
             @RequestParam(required = false) String reason) {
-        return inventoryService.inbound(warehouseId, skuId, quantity, referenceNo, reason)
+        return inventoryService.inbound(tenantId, warehouseId, skuId, quantity, referenceNo, reason)
                 .map(Response::success);
     }
 
