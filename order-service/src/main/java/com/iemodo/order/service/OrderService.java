@@ -2,16 +2,20 @@ package com.iemodo.order.service;
 
 import com.iemodo.common.exception.BusinessException;
 import com.iemodo.common.exception.ErrorCode;
+import com.iemodo.order.domain.DelayTaskStatus;
 import com.iemodo.order.domain.Order;
+import com.iemodo.order.domain.OrderDelayTask;
 import com.iemodo.order.domain.OrderItem;
 import com.iemodo.order.domain.OrderStatus;
 import com.iemodo.order.dto.CreateOrderRequest;
 import com.iemodo.order.dto.OrderDTO;
 import com.iemodo.order.dto.OrderItemDTO;
+import com.iemodo.order.repository.OrderDelayTaskRepository;
 import com.iemodo.order.repository.OrderItemRepository;
 import com.iemodo.order.repository.OrderRepository;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.dao.OptimisticLockingFailureException;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
@@ -22,6 +26,7 @@ import reactor.core.publisher.Mono;
 import java.math.BigDecimal;
 import java.time.Instant;
 import java.time.format.DateTimeFormatter;
+import java.time.temporal.ChronoUnit;
 import java.util.List;
 import java.util.concurrent.atomic.AtomicLong;
 import java.util.stream.Collectors;
@@ -44,12 +49,16 @@ import java.util.stream.Collectors;
 @RequiredArgsConstructor
 public class OrderService {
 
-    private final OrderRepository         orderRepository;
-    private final OrderItemRepository     orderItemRepository;
-    private final InventoryRedisService   inventoryRedisService;
+    private final OrderRepository            orderRepository;
+    private final OrderItemRepository        orderItemRepository;
+    private final InventoryRedisService      inventoryRedisService;
+    private final OrderDelayTaskRepository   orderDelayTaskRepository;
 
     /** Simple in-process sequence for order number uniqueness (prod: use Snowflake). */
     private static final AtomicLong SEQ = new AtomicLong(0);
+
+    /** Orders unpaid after this many minutes are auto-cancelled. */
+    private static final long PAYMENT_TIMEOUT_MINUTES = 30;
 
     // ─── Create ───────────────────────────────────────────────────────────
 
@@ -72,7 +81,9 @@ public class OrderService {
                                 return savedOrder;
                             });
                 })
-                // 4. Convert to DTO
+                // 4. Schedule payment timeout task
+                .flatMap(order -> orderDelayTaskRepository.save(buildDelayTask(order)).thenReturn(order))
+                // 5. Convert to DTO
                 .map(this::toDTO)
                 .doOnSuccess(dto -> log.info("Created order={} tenant={}", dto.getOrderNo(), tenantId))
                 // 5. Rollback Redis on any error
@@ -153,6 +164,54 @@ public class OrderService {
                 .doOnSuccess(dto -> log.info("Order={} transitioned to {}", dto.getOrderNo(), next));
     }
 
+    // ─── Timeout cancel (called by scheduler) ────────────────────────────
+
+    /**
+     * Attempts to cancel an order whose payment window has expired.
+     *
+     * <p>Uses a two-step concurrency guard:
+     * <ol>
+     *   <li>Atomically claim the task row (PENDING → PROCESSING). If another instance
+     *       already claimed it, returns empty.</li>
+     *   <li>Cancel the order. {@link OptimisticLockingFailureException} on the Order row
+     *       is swallowed — it means the order was concurrently modified and is no longer
+     *       in a cancellable state.</li>
+     * </ol>
+     */
+    public Mono<Void> cancelTimedOutOrder(OrderDelayTask task) {
+        return orderDelayTaskRepository.claimTask(task.getId())
+                .flatMap(claimed -> {
+                    if (claimed == 0) return Mono.empty(); // another instance got here first
+
+                    return orderRepository.findById(task.getOrderId())
+                            .flatMap(order -> {
+                                if (!order.isPendingPayment()) {
+                                    // already paid or cancelled — nothing to do
+                                    return orderDelayTaskRepository
+                                            .updateStatus(task.getId(), DelayTaskStatus.SKIPPED.name())
+                                            .then();
+                                }
+                                order.transitionTo(OrderStatus.CANCELLED);
+                                return orderRepository.save(order)
+                                        .flatMap(saved ->
+                                                orderItemRepository.findByOrderId(saved.getId())
+                                                        .flatMap(item -> inventoryRedisService.rollback(
+                                                                task.getTenantId(), item.getSku(), item.getQuantity()))
+                                                        .then()
+                                        )
+                                        .then(orderDelayTaskRepository
+                                                .updateStatus(task.getId(), DelayTaskStatus.DONE.name())
+                                                .then())
+                                        .doOnSuccess(v -> log.info("Timed out order={} tenant={}",
+                                                task.getOrderId(), task.getTenantId()));
+                            })
+                            .onErrorResume(OptimisticLockingFailureException.class, ex -> {
+                                log.warn("Optimistic lock conflict cancelling order={}, skipping", task.getOrderId());
+                                return Mono.empty();
+                            });
+                });
+    }
+
     // ─── Helpers ──────────────────────────────────────────────────────────
 
     private Mono<Void> preDeductAll(CreateOrderRequest req, String tenantId) {
@@ -198,6 +257,16 @@ public class OrderService {
                         .subtotal(i.getUnitPrice().multiply(BigDecimal.valueOf(i.getQuantity())))
                         .build())
                 .collect(Collectors.toList());
+    }
+
+    private OrderDelayTask buildDelayTask(Order order) {
+        return OrderDelayTask.builder()
+                .orderId(order.getId())
+                .tenantId(order.getTenantId())
+                .taskType("PAYMENT_TIMEOUT")
+                .executeTime(Instant.now().plus(PAYMENT_TIMEOUT_MINUTES, ChronoUnit.MINUTES))
+                .taskStatus(DelayTaskStatus.PENDING)
+                .build();
     }
 
     private String generateOrderNo() {
