@@ -71,6 +71,10 @@ public class User extends BaseEntity {
 
     private Instant deletedAt;
 
+    // ─── RBAC ────────────────────────────────────────────────────────────────
+
+    private String role;
+
     // ─── Domain behaviour ─────────────────────────────────────────────────
 
     public boolean isLocal() {

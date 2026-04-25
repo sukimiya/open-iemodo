@@ -35,5 +35,8 @@ public enum NotificationType {
 
     // ─── Marketing ────────────────────────────────────────────────────────
     COUPON_EXPIRING,
-    WISHLIST_PRICE_DROP
+    WISHLIST_PRICE_DROP,
+
+    // ─── Billing ─────────────────────────────────────────────────────────
+    USAGE_ALERT
 }

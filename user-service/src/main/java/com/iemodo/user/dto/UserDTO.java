@@ -14,6 +14,7 @@ import java.time.Instant;
 public class UserDTO {
 
     private Long id;
+    private String tenantId;
     private String email;
     
     // Profile
@@ -29,6 +30,7 @@ public class UserDTO {
     
     // Status
     private String status;
+    private String role;
     private Boolean emailVerified;
     private Boolean phoneVerified;
     

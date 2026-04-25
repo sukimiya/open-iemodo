@@ -1,5 +1,6 @@
 package com.iemodo.gateway.filter;
 
+import com.iemodo.common.billing.BillingServiceClient;
 import com.iemodo.gateway.domain.AccessLog;
 import com.iemodo.gateway.repository.AccessLogRepository;
 import lombok.RequiredArgsConstructor;
@@ -29,6 +30,7 @@ import java.util.UUID;
 public class AccessLogFilter implements GlobalFilter, Ordered {
 
     private final AccessLogRepository accessLogRepository;
+    private final BillingServiceClient billingServiceClient;
 
     // Order after TraceIdFilter but before other filters
     public static final int ORDER = -50;
@@ -96,6 +98,16 @@ public class AccessLogFilter implements GlobalFilter, Ordered {
                     
                     // Save log asynchronously (fire and forget)
                     saveAccessLog(accessLog);
+
+                    // Record billing usage when tenant is identified (fire and forget)
+                    if (tenantId != null) {
+                        billingServiceClient.recordUsage(tenantId, "api_calls", 1)
+                                .onErrorResume(e -> {
+                                    log.debug("Failed to record api_calls for tenant {}: {}", tenantId, e.getMessage());
+                                    return Mono.empty();
+                                })
+                                .subscribe();
+                    }
                 });
     }
 

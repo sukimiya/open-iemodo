@@ -2,16 +2,18 @@ package com.iemodo.tenant.service;
 
 import com.iemodo.tenant.domain.TenantSchema;
 import com.iemodo.tenant.repository.TenantSchemaRepository;
+import io.r2dbc.spi.ConnectionFactories;
+import io.r2dbc.spi.ConnectionFactory;
+import io.r2dbc.spi.ConnectionFactoryOptions;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.flywaydb.core.Flyway;
 import org.springframework.beans.factory.annotation.Value;
-import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.stereotype.Service;
 import reactor.core.publisher.Mono;
 import reactor.core.scheduler.Schedulers;
 
-import javax.sql.DataSource;
+import static io.r2dbc.spi.ConnectionFactoryOptions.*;
 
 /**
  * Service for provisioning tenant database schemas using Flyway.
@@ -25,7 +27,6 @@ import javax.sql.DataSource;
 public class TenantProvisioningService {
 
     private final TenantSchemaRepository schemaRepository;
-    private final DataSource dataSource;
 
     @Value("${spring.flyway.url}")
     private String jdbcUrl;
@@ -36,18 +37,20 @@ public class TenantProvisioningService {
     @Value("${spring.flyway.password}")
     private String jdbcPassword;
 
+    @Value("${spring.r2dbc.url}")
+    private String r2dbcUrl;
+
     /**
      * Provision database schemas for a new tenant.
      *
-     * <p>This is a blocking operation that uses JDBC (not R2DBC) to run Flyway migrations.
+     * <p>This is a blocking operation that uses Flyway to run migrations.
      */
     public Mono<Void> provisionSchemas(String tenantId) {
         return schemaRepository.findAllByTenantId(tenantId)
                 .collectList()
                 .flatMap(schemas -> Mono.fromCallable(() -> {
-                    JdbcTemplate jdbc = new JdbcTemplate(dataSource);
                     for (TenantSchema schema : schemas) {
-                        provisionSchema(jdbc, schema);
+                        provisionSchema(schema);
                     }
                     return null;
                 }).subscribeOn(Schedulers.boundedElastic()))
@@ -55,12 +58,12 @@ public class TenantProvisioningService {
                 .doOnSuccess(v -> log.info("Provisioned schemas for tenant {}", tenantId));
     }
 
-    private void provisionSchema(JdbcTemplate jdbc, TenantSchema schema) {
+    private void provisionSchema(TenantSchema schema) {
         String schemaName = schema.getSchemaName();
 
         try {
-            // Create schema if not exists
-            jdbc.execute("CREATE SCHEMA IF NOT EXISTS " + schemaName);
+            // Create schema if not exists using R2DBC
+            createSchemaIfNotExists(schemaName);
 
             // Run Flyway migrations for this schema
             Flyway flyway = Flyway.configure()
@@ -78,6 +81,50 @@ public class TenantProvisioningService {
         }
     }
 
+    private void createSchemaIfNotExists(String schemaName) {
+        // Parse the R2DBC URL to extract connection parameters
+        String r2dbc = r2dbcUrl;
+        String host = "localhost";
+        int port = 5432;
+        String database = "iemodo";
+
+        // Parse r2dbc:postgresql://host:port/database
+        if (r2dbc != null && r2dbc.startsWith("r2dbc:")) {
+            String withoutPrefix = r2dbc.substring(6);
+            if (withoutPrefix.startsWith("postgresql://")) {
+                withoutPrefix = withoutPrefix.substring(14);
+                int slashIdx = withoutPrefix.indexOf('/');
+                if (slashIdx > 0) {
+                    String hostPort = withoutPrefix.substring(0, slashIdx);
+                    database = withoutPrefix.substring(slashIdx + 1);
+                    int colonIdx = hostPort.indexOf(':');
+                    if (colonIdx > 0) {
+                        host = hostPort.substring(0, colonIdx);
+                        port = Integer.parseInt(hostPort.substring(colonIdx + 1));
+                    } else {
+                        host = hostPort;
+                    }
+                }
+            }
+        }
+
+        ConnectionFactory connectionFactory = ConnectionFactories.get(ConnectionFactoryOptions.builder()
+                .option(DRIVER, "postgresql")
+                .option(HOST, host)
+                .option(PORT, port)
+                .option(DATABASE, database)
+                .option(USER, jdbcUser)
+                .option(PASSWORD, jdbcPassword)
+                .build());
+
+        // Use connection to create schema
+        Mono.from(connectionFactory.create())
+                .flatMapMany(connection -> connection
+                        .createStatement("CREATE SCHEMA IF NOT EXISTS " + schemaName)
+                        .execute())
+                .blockLast();
+    }
+
     /**
      * Drop all schemas for a tenant (dangerous operation!).
      */
@@ -85,9 +132,45 @@ public class TenantProvisioningService {
         return schemaRepository.findAllByTenantId(tenantId)
                 .collectList()
                 .flatMap(schemas -> Mono.fromCallable(() -> {
-                    JdbcTemplate jdbc = new JdbcTemplate(dataSource);
+                    String r2dbc = r2dbcUrl;
+                    String host = "localhost";
+                    int port = 5432;
+                    String database = "iemodo";
+
+                    if (r2dbc != null && r2dbc.startsWith("r2dbc:")) {
+                        String withoutPrefix = r2dbc.substring(6);
+                        if (withoutPrefix.startsWith("postgresql://")) {
+                            withoutPrefix = withoutPrefix.substring(14);
+                            int slashIdx = withoutPrefix.indexOf('/');
+                            if (slashIdx > 0) {
+                                String hostPort = withoutPrefix.substring(0, slashIdx);
+                                database = withoutPrefix.substring(slashIdx + 1);
+                                int colonIdx = hostPort.indexOf(':');
+                                if (colonIdx > 0) {
+                                    host = hostPort.substring(0, colonIdx);
+                                    port = Integer.parseInt(hostPort.substring(colonIdx + 1));
+                                } else {
+                                    host = hostPort;
+                                }
+                            }
+                        }
+                    }
+
+                    ConnectionFactory connectionFactory = ConnectionFactories.get(ConnectionFactoryOptions.builder()
+                            .option(DRIVER, "postgresql")
+                            .option(HOST, host)
+                            .option(PORT, port)
+                            .option(DATABASE, database)
+                            .option(USER, jdbcUser)
+                            .option(PASSWORD, jdbcPassword)
+                            .build());
+
                     for (TenantSchema schema : schemas) {
-                        jdbc.execute("DROP SCHEMA IF EXISTS " + schema.getSchemaName() + " CASCADE");
+                        Mono.from(connectionFactory.create())
+                                .flatMapMany(connection -> connection
+                                        .createStatement("DROP SCHEMA IF EXISTS " + schema.getSchemaName() + " CASCADE")
+                                        .execute())
+                                .blockLast();
                         log.warn("Dropped schema: {}", schema.getSchemaName());
                     }
                     return null;

@@ -234,6 +234,8 @@ public class AuthService {
                 .totalOrders(user.getTotalOrders())
                 .totalSpent(user.getTotalSpent())
                 .createdAt(user.getCreatedAt())
+                .tenantId(user.getTenantId())
+                .role(user.getRole() != null ? user.getRole() : "TENANT_ADMIN")
                 .updatedAt(user.getUpdatedAt())
                 .build();
     }

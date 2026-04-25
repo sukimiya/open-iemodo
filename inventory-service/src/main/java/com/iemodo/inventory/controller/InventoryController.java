@@ -2,24 +2,17 @@ package com.iemodo.inventory.controller;
 
 import com.iemodo.common.response.Response;
 import com.iemodo.inventory.domain.Inventory;
-import com.iemodo.inventory.domain.Warehouse;
 import com.iemodo.inventory.service.InventoryCacheService;
 import com.iemodo.inventory.service.InventoryService;
 import com.iemodo.inventory.service.WarehouseAllocationService;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.web.bind.annotation.*;
-import reactor.core.publisher.Flux;
 import reactor.core.publisher.Mono;
 
 import java.math.BigDecimal;
-import java.util.Map;
+import java.util.List;
 
-/**
- * REST controller for inventory management.
- * 
- * <p>Base path: /inv/api/v1
- */
 @Slf4j
 @RestController
 @RequestMapping("/inv/api/v1")
@@ -33,30 +26,31 @@ public class InventoryController {
     // ─── Inventory Queries ─────────────────────────────────────────────────
 
     @GetMapping("/inventory/{skuId}")
-    public Mono<Response<Integer>> getTotalSellable(@PathVariable Long skuId) {
+    public Mono<Response<Integer>> getTotalSellable(@PathVariable("skuId") Long skuId) {
         return inventoryService.getTotalSellable(skuId)
                 .map(Response::success);
     }
 
     @GetMapping("/warehouses/{warehouseId}/inventory/{skuId}")
     public Mono<Response<Inventory>> getWarehouseInventory(
-            @PathVariable Long warehouseId,
-            @PathVariable Long skuId) {
+            @PathVariable("warehouseId") Long warehouseId,
+            @PathVariable("skuId") Long skuId) {
         return inventoryService.getInventory(warehouseId, skuId)
                 .map(Response::success);
     }
 
     @GetMapping("/inventory/{skuId}/warehouses")
-    public Mono<Response<java.util.List<Inventory>>> findWarehousesWithStock(
-            @PathVariable Long skuId,
+    public Mono<Response<List<Inventory>>> findWarehousesWithStock(
+            @PathVariable("skuId") Long skuId,
             @RequestParam(defaultValue = "1") int quantity) {
         return inventoryService.findWarehousesWithStock(skuId, quantity)
                 .map(Response::success);
     }
 
     @GetMapping("/inventory/low-stock")
-    public Flux<Response<Inventory>> getLowStockItems() {
+    public Mono<Response<List<Inventory>>> getLowStockItems() {
         return inventoryService.getLowStockItems()
+                .collectList()
                 .map(Response::success);
     }
 
@@ -129,7 +123,7 @@ public class InventoryController {
     @GetMapping("/cache/stock/{skuId}")
     public Mono<Response<Integer>> getCacheStock(
             @RequestHeader("X-TenantID") String tenantId,
-            @PathVariable Long skuId) {
+            @PathVariable("skuId") Long skuId) {
         return cacheService.getStock(tenantId, skuId)
                 .map(Response::success);
     }
@@ -143,20 +137,18 @@ public class InventoryController {
             @RequestParam String countryCode,
             @RequestParam(required = false) BigDecimal destLat,
             @RequestParam(required = false) BigDecimal destLon) {
-        
         return allocationService.allocateWarehouse(skuId, quantity, countryCode, destLat, destLon,
                         WarehouseAllocationService.AllocationPreference.BALANCED)
                 .map(Response::success);
     }
 
     @GetMapping("/warehouses/rank")
-    public Mono<Response<java.util.List<WarehouseAllocationService.WarehouseAllocation>>> rankWarehouses(
+    public Mono<Response<List<WarehouseAllocationService.WarehouseAllocation>>> rankWarehouses(
             @RequestParam Long skuId,
             @RequestParam int quantity,
             @RequestParam String countryCode,
             @RequestParam(required = false) BigDecimal destLat,
             @RequestParam(required = false) BigDecimal destLon) {
-        
         return allocationService.rankWarehouses(skuId, quantity, countryCode, destLat, destLon)
                 .map(Response::success);
     }
@@ -164,9 +156,10 @@ public class InventoryController {
     // ─── Transactions ──────────────────────────────────────────────────────
 
     @GetMapping("/inventory/{skuId}/transactions")
-    public Flux<Response<com.iemodo.inventory.domain.InventoryTransaction>> getTransactions(
-            @PathVariable Long skuId) {
+    public Mono<Response<List<com.iemodo.inventory.domain.InventoryTransaction>>> getTransactions(
+            @PathVariable("skuId") Long skuId) {
         return inventoryService.getTransactions(skuId)
+                .collectList()
                 .map(Response::success);
     }
 }

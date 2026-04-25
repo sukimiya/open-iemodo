@@ -1,6 +1,7 @@
 package com.iemodo.user.repository;
 
 import com.iemodo.user.domain.UserAddress;
+import org.springframework.data.r2dbc.repository.Modifying;
 import org.springframework.data.r2dbc.repository.Query;
 import org.springframework.data.repository.reactive.ReactiveCrudRepository;
 import org.springframework.stereotype.Repository;
@@ -53,4 +54,11 @@ public interface UserAddressRepository extends ReactiveCrudRepository<UserAddres
      */
     @Query("SELECT * FROM user_addresses WHERE customer_id = :customerId AND geo_hash LIKE :geoHashPrefix%")
     Flux<UserAddress> findByCustomerIdAndGeoHashStartingWith(Long customerId, String geoHashPrefix);
+
+    /**
+     * Delete all addresses for a user (GDPR erasure).
+     */
+    @Modifying
+    @Query("DELETE FROM user_addresses WHERE customer_id = :customerId")
+    Mono<Integer> deleteAllByCustomerId(Long customerId);
 }

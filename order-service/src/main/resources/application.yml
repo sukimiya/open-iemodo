@@ -21,6 +21,9 @@ spring:
       password: ${REDIS_PASSWORD:redis123}
 
 iemodo:
+  services:
+    tenant-management: ${TENANT_MANAGEMENT_URL:http://localhost:8091}
+
   tenants:
     - id: tenant_001
       type: SCHEMA

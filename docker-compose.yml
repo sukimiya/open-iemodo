@@ -131,6 +131,31 @@ services:
     networks:
       - iemodo-net
 
+  # ─────────────────────────────────────────────
+  # MinIO (S3-compatible object storage)
+  # ─────────────────────────────────────────────
+  minio:
+    image: minio/minio:latest
+    platform: linux/amd64
+    container_name: iemodo-minio
+    restart: unless-stopped
+    command: server /data --console-address ":9001"
+    ports:
+      - "${MINIO_PORT:-9000}:9000"
+      - "${MINIO_CONSOLE_PORT:-9001}:9001"
+    environment:
+      MINIO_ROOT_USER: ${MINIO_ROOT_USER:-minioadmin}
+      MINIO_ROOT_PASSWORD: ${MINIO_ROOT_PASSWORD:-minioadmin}
+    volumes:
+      - minio_data:/data
+    healthcheck:
+      test: ["CMD", "mc", "ready", "local"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    networks:
+      - iemodo-net
+
 networks:
   iemodo-net:
     driver: bridge
@@ -138,5 +163,6 @@ networks:
 volumes:
   postgres_data:
   redis_data:
+  minio_data:
   prometheus_data:
   grafana_data:

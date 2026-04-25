@@ -60,6 +60,12 @@ iemodo:
       refresh-token-ttl-days: 30
       issuer: iemodo-user-service
 
+  # ─── GDPR data retention ──────────────────────────────────────────────
+  gdpr:
+    retention:
+      user-data-days: 365     # Purge soft-deleted users after 1 year
+      token-days: 90          # Delete expired refresh tokens after 90 days
+
 # ─── Actuator ────────────────────────────────────────────────────────────
 management:
   endpoints:

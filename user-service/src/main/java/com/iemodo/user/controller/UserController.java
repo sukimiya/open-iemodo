@@ -8,6 +8,7 @@ import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.web.bind.annotation.*;
+import reactor.core.publisher.Flux;
 import reactor.core.publisher.Mono;
 
 /**
@@ -42,6 +43,19 @@ public class UserController {
             @RequestHeader("X-User-ID") Long userId,
             @RequestBody @Valid UpdateUserRequest request) {
         return userService.updateUser(userId, request).map(Response::success);
+    }
+
+    /**
+     * GET /uc/api/v1/users
+     * Admin endpoint — list all users. Optional ?tenantId= filter.
+     */
+    @GetMapping
+    public Mono<Response<java.util.List<UserDTO>>> getAllUsers(
+            @RequestParam(value = "tenantId", required = false) String tenantId) {
+        Flux<UserDTO> users = tenantId != null
+                ? userService.getUsersByTenant(tenantId)
+                : userService.getAllUsers();
+        return users.collectList().map(Response::success);
     }
 
     /**

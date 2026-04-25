@@ -1,5 +1,6 @@
 package com.iemodo.order.service;
 
+import com.iemodo.common.billing.BillingServiceClient;
 import com.iemodo.common.exception.BusinessException;
 import com.iemodo.common.exception.ErrorCode;
 import com.iemodo.common.exception.InsufficientStockException;
@@ -7,6 +8,7 @@ import com.iemodo.order.domain.Order;
 import com.iemodo.order.domain.OrderItem;
 import com.iemodo.order.domain.OrderStatus;
 import com.iemodo.order.dto.CreateOrderRequest;
+import com.iemodo.order.repository.OrderDelayTaskRepository;
 import com.iemodo.order.repository.OrderItemRepository;
 import com.iemodo.order.repository.OrderRepository;
 import org.junit.jupiter.api.BeforeEach;
@@ -31,16 +33,18 @@ import static org.mockito.Mockito.when;
 @DisplayName("OrderService")
 class OrderServiceTest {
 
-    @Mock private OrderRepository         orderRepository;
-    @Mock private OrderItemRepository     orderItemRepository;
-    @Mock private InventoryRedisService   inventoryRedisService;
+    @Mock private OrderRepository            orderRepository;
+    @Mock private OrderItemRepository        orderItemRepository;
+    @Mock private InventoryRedisService      inventoryRedisService;
+    @Mock private OrderDelayTaskRepository   orderDelayTaskRepository;
+    @Mock private BillingServiceClient       billingServiceClient;
 
     private OrderService orderService;
 
     @BeforeEach
     void setUp() {
         MockitoAnnotations.openMocks(this);
-        orderService = new OrderService(orderRepository, orderItemRepository, inventoryRedisService);
+        orderService = new OrderService(orderRepository, orderItemRepository, inventoryRedisService, orderDelayTaskRepository, billingServiceClient);
     }
 
     // ─── Helpers ──────────────────────────────────────────────────────────

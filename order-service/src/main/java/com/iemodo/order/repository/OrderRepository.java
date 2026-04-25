@@ -21,4 +21,7 @@ public interface OrderRepository extends R2dbcRepository<Order, Long> {
 
     @Query("SELECT * FROM orders WHERE status = :status ORDER BY created_at DESC LIMIT :limit")
     Flux<Order> findRecentByStatus(OrderStatus status, int limit);
+
+    @Query("SELECT COUNT(*) FROM orders WHERE tenant_id = :tenantId AND create_time >= CURRENT_DATE")
+    Mono<Long> countTodayByTenantId(String tenantId);
 }

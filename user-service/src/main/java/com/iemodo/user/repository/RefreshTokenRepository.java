@@ -8,6 +8,8 @@ import org.springframework.stereotype.Repository;
 import reactor.core.publisher.Flux;
 import reactor.core.publisher.Mono;
 
+import java.time.Instant;
+
 @Repository
 public interface RefreshTokenRepository extends R2dbcRepository<RefreshToken, Long> {
 
@@ -22,4 +24,8 @@ public interface RefreshTokenRepository extends R2dbcRepository<RefreshToken, Lo
     @Modifying
     @Query("UPDATE refresh_tokens SET revoked = TRUE WHERE token_hash = :tokenHash")
     Mono<Integer> revokeByTokenHash(String tokenHash);
+
+    @Modifying
+    @Query("DELETE FROM refresh_tokens WHERE expires_at < :cutoff")
+    Mono<Integer> deleteExpiredBefore(Instant cutoff);
 }

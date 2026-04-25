@@ -33,8 +33,11 @@ spring:
           max-active: 8
           max-idle: 4
 
-# Custom properties
+# Internal service URLs
 iemodo:
+  services:
+    tenant-management: ${TENANT_MANAGEMENT_URL:http://localhost:8091}
+
   product:
     cache:
       product-ttl: 3600      # Product cache TTL in seconds

@@ -1,5 +1,6 @@
 package com.iemodo.product.service;
 
+import com.iemodo.common.billing.BillingServiceClient;
 import com.iemodo.common.exception.BusinessException;
 import com.iemodo.common.exception.ErrorCode;
 import com.iemodo.product.domain.Product;
@@ -30,6 +31,7 @@ public class ProductService {
     private final ProductRepository productRepository;
     private final SkuRepository skuRepository;
     private final ProductCountryVisibilityRepository visibilityRepository;
+    private final BillingServiceClient billingServiceClient;
 
     /**
      * Get product by ID with country-specific visibility check.
@@ -112,9 +114,12 @@ public class ProductService {
      * Create a new product.
      */
     @Transactional
-    public Mono<Product> createProduct(Product product) {
-        return validateProductCode(product.getProductCode())
+    public Mono<Product> createProduct(Product product, String tenantId) {
+        return billingServiceClient.checkUsage(tenantId, "products_created", 1)
+                .then(validateProductCode(product.getProductCode()))
                 .flatMap(valid -> productRepository.save(product))
+                .flatMap(saved -> billingServiceClient.recordUsage(tenantId, "products_created", 1)
+                        .thenReturn(saved))
                 .doOnSuccess(p -> log.info("Created product id={}, code={}", p.getId(), p.getProductCode()));
     }
 

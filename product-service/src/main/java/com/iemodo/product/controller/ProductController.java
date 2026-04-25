@@ -10,6 +10,8 @@ import org.springframework.web.bind.annotation.*;
 import reactor.core.publisher.Flux;
 import reactor.core.publisher.Mono;
 
+import java.util.List;
+
 /**
  * REST controller for product management.
  * 
@@ -27,12 +29,13 @@ public class ProductController {
      * Get product list for a country.
      */
     @GetMapping
-    public Flux<Response<Product>> getProducts(
+    public Mono<Response<List<Product>>> getProducts(
             @RequestParam(value = "country", defaultValue = "US") String countryCode,
             @RequestParam(value = "status", defaultValue = "ACTIVE") String status,
             @RequestParam(value = "page", defaultValue = "0") int page,
             @RequestParam(value = "size", defaultValue = "20") int size) {
         return productService.getProductsForCountry(countryCode, status, page, size)
+                .collectList()
                 .map(Response::success);
     }
 
@@ -41,7 +44,7 @@ public class ProductController {
      */
     @GetMapping("/{id}")
     public Mono<Response<ProductService.ProductDetail>> getProduct(
-            @PathVariable Long id,
+            @PathVariable("id") Long id,
             @RequestParam(value = "country", defaultValue = "US") String countryCode) {
         return productService.getProductDetail(id, countryCode)
                 .map(Response::success);
@@ -99,8 +102,10 @@ public class ProductController {
      * Create product (Admin).
      */
     @PostMapping
-    public Mono<Response<Product>> createProduct(@Valid @RequestBody Product product) {
-        return productService.createProduct(product)
+    public Mono<Response<Product>> createProduct(
+            @Valid @RequestBody Product product,
+            @RequestHeader("X-TenantID") String tenantId) {
+        return productService.createProduct(product, tenantId)
                 .map(Response::success);
     }
 
@@ -109,7 +114,7 @@ public class ProductController {
      */
     @PutMapping("/{id}")
     public Mono<Response<Product>> updateProduct(
-            @PathVariable Long id,
+            @PathVariable("id") Long id,
             @RequestBody Product product) {
         return productService.updateProduct(id, product)
                 .map(Response::success);
@@ -119,7 +124,7 @@ public class ProductController {
      * Delete product (Admin).
      */
     @DeleteMapping("/{id}")
-    public Mono<Response<Void>> deleteProduct(@PathVariable Long id) {
+    public Mono<Response<Void>> deleteProduct(@PathVariable("id") Long id) {
         return productService.deleteProduct(id)
                 .then(Mono.just(Response.success()));
     }
@@ -129,8 +134,8 @@ public class ProductController {
      */
     @PutMapping("/{id}/visibility/{countryCode}")
     public Mono<Response<Void>> setCountryVisibility(
-            @PathVariable Long id,
-            @PathVariable String countryCode,
+            @PathVariable("id") Long id,
+            @PathVariable("countryCode") String countryCode,
             @RequestParam boolean visible,
             @RequestParam boolean purchasable) {
         return productService.setCountryVisibility(id, countryCode, visible, purchasable)

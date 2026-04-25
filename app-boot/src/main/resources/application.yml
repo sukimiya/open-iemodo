@@ -129,7 +129,7 @@ stripe:
     endpoint: http://localhost:9000
     access-key: ${MINIO_ACCESS_KEY:minioadmin}
     secret-key: ${MINIO_SECRET_KEY:minioadmin}
-    bucket: iemodo-files
+    bucket: iemodo
 
   # ─── Map services (optional API keys) ──────────────────────────────────
   map:

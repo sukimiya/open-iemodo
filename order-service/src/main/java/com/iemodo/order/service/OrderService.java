@@ -1,5 +1,6 @@
 package com.iemodo.order.service;
 
+import com.iemodo.common.billing.BillingServiceClient;
 import com.iemodo.common.exception.BusinessException;
 import com.iemodo.common.exception.ErrorCode;
 import com.iemodo.order.domain.DelayTaskStatus;
@@ -54,6 +55,7 @@ public class OrderService {
     private final OrderItemRepository        orderItemRepository;
     private final InventoryRedisService      inventoryRedisService;
     private final OrderDelayTaskRepository   orderDelayTaskRepository;
+    private final BillingServiceClient       billingServiceClient;
 
     /** Simple in-process sequence for order number uniqueness (prod: use Snowflake). */
     private static final AtomicLong SEQ = new AtomicLong(0);
@@ -68,8 +70,12 @@ public class OrderService {
         // 0. Idempotency check — if a token was provided, validate it first
         Mono<Void> idempotencyGuard = validateIdempotencyToken(req, tenantId);
 
+        // 0a. Billing check — ensure plan allows this order
+        Mono<Void> billingGuard = billingServiceClient.checkUsage(tenantId, "orders_placed", 1);
+
         // 1. Pre-deduct each SKU in Redis (sequential to avoid partial success)
         return idempotencyGuard
+                .then(billingGuard)
                 .then(preDeductAll(req, tenantId))
                 // 2. Build and save Order
                 .then(Mono.defer(() -> {
@@ -94,6 +100,13 @@ public class OrderService {
                 })
                 // 5. Schedule payment timeout task
                 .flatMap(order -> orderDelayTaskRepository.save(buildDelayTask(order)).thenReturn(order))
+                // 5a. Record billing usage (fire-and-forget — must not fail the order)
+                .flatMap(order -> billingServiceClient.recordUsage(tenantId, "orders_placed", 1)
+                        .onErrorResume(e -> {
+                            log.warn("Failed to record billing usage for order={}: {}", order.getId(), e.getMessage());
+                            return Mono.empty();
+                        })
+                        .thenReturn(order))
                 // 6. Convert to DTO
                 .map(this::toDTO)
                 .doOnSuccess(dto -> log.info("Created order={} tenant={}", dto.getOrderNo(), tenantId))
@@ -133,6 +146,12 @@ public class OrderService {
                             order.setItems(items);
                             return toDTO(order);
                         }));
+    }
+
+    // ─── Admin dashboard ─────────────────────────────────────────────
+
+    public Mono<Long> countTodayOrders(String tenantId) {
+        return orderRepository.countTodayByTenantId(tenantId);
     }
 
     // ─── Cancel ──────────────────────────────────────────────────────────

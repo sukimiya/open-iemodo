@@ -33,6 +33,14 @@ public enum ErrorCode {
     RETURN_WINDOW_EXPIRED(4042, "Return window has expired for this region"),
     RMA_ALREADY_EXISTS(4043, "An active RMA already exists for this order item"),
 
+    // ─── Billing errors ──────────────────────────────────────
+    PLAN_LIMIT_EXCEEDED(4050, "Plan limit exceeded"),
+    SUBSCRIPTION_NOT_FOUND(4051, "Subscription not found"),
+    SUBSCRIPTION_INACTIVE(4052, "Subscription is not active"),
+    SUBSCRIPTION_PAST_DUE(4053, "Subscription is past due"),
+    CHECKOUT_SESSION_FAILED(4054, "Failed to create checkout session"),
+    WEBHOOK_SIGNATURE_INVALID(4055, "Invalid webhook signature"),
+
     // ─── Infrastructure errors ───────────────────────────────
     ENCRYPTION_ERROR(5001, "Encryption operation failed"),
     MAP_SERVICE_ERROR(5002, "Map service operation failed"),

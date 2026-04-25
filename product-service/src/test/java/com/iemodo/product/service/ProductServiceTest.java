@@ -1,5 +1,6 @@
 package com.iemodo.product.service;
 
+import com.iemodo.common.billing.BillingServiceClient;
 import com.iemodo.common.exception.BusinessException;
 import com.iemodo.common.exception.ErrorCode;
 import com.iemodo.product.domain.Product;
@@ -29,13 +30,14 @@ class ProductServiceTest {
     @Mock private ProductRepository productRepository;
     @Mock private SkuRepository skuRepository;
     @Mock private ProductCountryVisibilityRepository visibilityRepository;
+    @Mock private BillingServiceClient billingServiceClient;
 
     private ProductService productService;
 
     @BeforeEach
     void setUp() {
         MockitoAnnotations.openMocks(this);
-        productService = new ProductService(productRepository, skuRepository, visibilityRepository);
+        productService = new ProductService(productRepository, skuRepository, visibilityRepository, billingServiceClient);
     }
 
     @Test

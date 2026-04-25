@@ -6,20 +6,13 @@ import io.minio.http.Method;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Value;
-import org.springframework.http.codec.multipart.FilePart;
 import org.springframework.stereotype.Service;
 import reactor.core.publisher.Mono;
 import reactor.core.scheduler.Schedulers;
 
-import java.io.IOException;
-import java.security.InvalidKeyException;
-import java.security.NoSuchAlgorithmException;
 import java.util.UUID;
 import java.util.concurrent.TimeUnit;
 
-/**
- * Service for file storage operations using MinIO.
- */
 @Slf4j
 @Service
 @RequiredArgsConstructor
@@ -27,117 +20,74 @@ public class FileStorageService {
 
     private final MinioClient minioClient;
 
-    @Value("${minio.url-expiry:3600}")
+    @Value("${iemodo.minio.bucket:iemodo}")
+    private String bucket;
+
+    @Value("${iemodo.minio.url-expiry:3600}")
     private int urlExpirySeconds;
 
-    // Predefined buckets
-    public static final String BUCKET_PRODUCT_IMAGES = "product-images";
-    public static final String BUCKET_USER_AVATARS = "user-avatars";
-    public static final String BUCKET_DOCUMENTS = "documents";
+    // ─── Storage directory prefixes ─────────────────────────────────────
+    public static final String PREFIX_PRODUCTS       = "products";
+    public static final String PREFIX_BRANDS         = "products/brands";
+    public static final String PREFIX_CATEGORIES     = "categories";
+    public static final String PREFIX_AVATARS        = "customers/avatars";
+    public static final String PREFIX_SNS            = "customers/sns";
+    public static final String PREFIX_FEEDBACK       = "feedback/images";
+    public static final String PREFIX_BANNERS        = "banners";
+    public static final String PREFIX_SYSTEM         = "system";
+    public static final String PREFIX_TEMP           = "temp";
 
     /**
-     * Initialize buckets on startup.
-     */
-    public Mono<Void> initializeBuckets() {
-        return Mono.fromCallable(() -> {
-            createBucketIfNotExists(BUCKET_PRODUCT_IMAGES);
-            createBucketIfNotExists(BUCKET_USER_AVATARS);
-            createBucketIfNotExists(BUCKET_DOCUMENTS);
-            return null;
-        }).subscribeOn(Schedulers.boundedElastic()).then();
-    }
-
-    private void createBucketIfNotExists(String bucketName) 
-            throws ServerException, InsufficientDataException, 
-                   ErrorResponseException, IOException, 
-                   NoSuchAlgorithmException, InvalidKeyException, 
-                   InvalidResponseException, XmlParserException, 
-                   InternalException {
-        boolean exists = minioClient.bucketExists(
-                BucketExistsArgs.builder().bucket(bucketName).build());
-        if (!exists) {
-            minioClient.makeBucket(
-                    MakeBucketArgs.builder().bucket(bucketName).build());
-            log.info("Created bucket: {}", bucketName);
-        }
-    }
-
-    /**
-     * Upload a file to the specified bucket.
+     * Generate a presigned PUT URL for direct browser-to-MinIO upload.
      *
-     * @param bucketName target bucket
-     * @param file       the file to upload
-     * @param objectKey  optional custom object key; if null, auto-generated UUID
-     * @return the object key of the stored file
+     * @param objectKey the full object key including prefix, e.g. "products/abc123.jpg"
+     * @return presigned PUT URL valid for 15 minutes
      */
-    public Mono<String> uploadFile(String bucketName, FilePart file, String objectKey) {
-        String key = objectKey != null ? objectKey : generateObjectKey(file.filename());
-        
+    public Mono<String> generatePresignedUploadUrl(String objectKey) {
         return Mono.fromCallable(() -> {
-            // Convert FilePart to InputStream and upload
-            // Note: This is a simplified implementation
-            // In production, you might want to use a streaming approach
-            
-            byte[] bytes = file.content()
-                    .reduce(new byte[0], (acc, buffer) -> {
-                        int readable = buffer.readableByteCount();
-                        byte[] newAcc = new byte[acc.length + readable];
-                        System.arraycopy(acc, 0, newAcc, 0, acc.length);
-                        buffer.read(newAcc, acc.length, readable);
-                        return newAcc;
-                    })
-                    .block();
-
-            minioClient.putObject(
-                    PutObjectArgs.builder()
-                            .bucket(bucketName)
-                            .object(key)
-                            .stream(new java.io.ByteArrayInputStream(bytes), bytes.length, -1)
-                            .contentType(file.headers().getContentType() != null 
-                                    ? file.headers().getContentType().toString() 
-                                    : "application/octet-stream")
+            String url = minioClient.getPresignedObjectUrl(
+                    GetPresignedObjectUrlArgs.builder()
+                            .method(Method.PUT)
+                            .bucket(bucket)
+                            .object(objectKey)
+                            .expiry(15, TimeUnit.MINUTES)
                             .build());
-
-            log.info("Uploaded file to {}/{} ({} bytes)", bucketName, key, bytes.length);
-            return key;
+            log.debug("Presigned upload URL for {}/{}", bucket, objectKey);
+            return url;
         }).subscribeOn(Schedulers.boundedElastic());
     }
 
     /**
-     * Get a pre-signed URL for downloading a file.
+     * Generate a presigned GET URL for downloading a file.
      *
-     * @param bucketName the bucket containing the file
-     * @param objectKey  the object key
-     * @return pre-signed URL valid for configured expiry time
+     * @param objectKey the full object key including prefix, e.g. "products/abc123.jpg"
+     * @return presigned GET URL valid for the configured expiry time
      */
-    public Mono<String> getPresignedUrl(String bucketName, String objectKey) {
+    public Mono<String> getPresignedUrl(String objectKey) {
         return Mono.fromCallable(() -> {
             String url = minioClient.getPresignedObjectUrl(
                     GetPresignedObjectUrlArgs.builder()
                             .method(Method.GET)
-                            .bucket(bucketName)
+                            .bucket(bucket)
                             .object(objectKey)
                             .expiry(urlExpirySeconds, TimeUnit.SECONDS)
                             .build());
-            log.debug("Generated presigned URL for {}/{}", bucketName, objectKey);
+            log.debug("Presigned GET URL for {}/{}", bucket, objectKey);
             return url;
         }).subscribeOn(Schedulers.boundedElastic());
     }
 
     /**
      * Delete a file from storage.
-     *
-     * @param bucketName the bucket containing the file
-     * @param objectKey  the object key
      */
-    public Mono<Void> deleteFile(String bucketName, String objectKey) {
+    public Mono<Void> deleteFile(String objectKey) {
         return Mono.fromCallable(() -> {
             minioClient.removeObject(
                     RemoveObjectArgs.builder()
-                            .bucket(bucketName)
+                            .bucket(bucket)
                             .object(objectKey)
                             .build());
-            log.info("Deleted file from {}/{}", bucketName, objectKey);
+            log.info("Deleted {}/{}", bucket, objectKey);
             return null;
         }).subscribeOn(Schedulers.boundedElastic()).then();
     }
@@ -145,12 +95,12 @@ public class FileStorageService {
     /**
      * Check if a file exists.
      */
-    public Mono<Boolean> fileExists(String bucketName, String objectKey) {
+    public Mono<Boolean> fileExists(String objectKey) {
         return Mono.fromCallable(() -> {
             try {
                 minioClient.statObject(
                         StatObjectArgs.builder()
-                                .bucket(bucketName)
+                                .bucket(bucket)
                                 .object(objectKey)
                                 .build());
                 return true;
@@ -163,12 +113,16 @@ public class FileStorageService {
         }).subscribeOn(Schedulers.boundedElastic());
     }
 
-    private String generateObjectKey(String originalFilename) {
+    /**
+     * Build a unique object key from prefix and original filename.
+     * <p>Result: {@code <prefix>/<uuid><ext>}, e.g. {@code products/a1b2c3d4.jpg}
+     */
+    public static String buildObjectKey(String prefix, String originalFilename) {
         String extension = "";
         int lastDot = originalFilename.lastIndexOf('.');
         if (lastDot > 0) {
             extension = originalFilename.substring(lastDot);
         }
-        return UUID.randomUUID().toString().replace("-", "") + extension;
+        return prefix + "/" + UUID.randomUUID().toString().replace("-", "") + extension;
     }
 }

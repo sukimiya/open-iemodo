@@ -11,6 +11,7 @@ import org.springframework.web.bind.annotation.*;
 import reactor.core.publisher.Flux;
 import reactor.core.publisher.Mono;
 
+import java.util.List;
 import java.util.Map;
 
 /**
@@ -30,8 +31,9 @@ public class TenantController {
      * List all tenants.
      */
     @GetMapping
-    public Flux<Response<TenantDTO>> listTenants() {
+    public Mono<Response<List<TenantDTO>>> listTenants() {
         return tenantService.getAllTenants()
+                .collectList()
                 .map(Response::success);
     }
 

@@ -88,6 +88,17 @@ public class OrderController {
     }
 
     /**
+     * GET /oc/api/v1/orders/today-count
+     * Admin dashboard — today's order count for a tenant.
+     */
+    @GetMapping("/today-count")
+    public Mono<Response<Long>> todayOrderCount(
+            @RequestHeader("X-TenantID") String tenantId) {
+        return orderService.countTodayOrders(tenantId)
+                .map(Response::success);
+    }
+
+    /**
      * Cancel an order (PENDING_PAYMENT or PAID only).
      */
     @PostMapping("/{orderId}/cancel")

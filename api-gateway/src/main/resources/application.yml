@@ -273,6 +273,9 @@ spring:
 
 # ─── Gateway JWT configuration ──────────────────────────────────────────
 iemodo:
+  services:
+    tenant-management: ${TENANT_MANAGEMENT_URL:http://tenant-management-service:8091}
+
   gateway:
     jwt:
       # RSA public key for verifying tokens issued by user-service

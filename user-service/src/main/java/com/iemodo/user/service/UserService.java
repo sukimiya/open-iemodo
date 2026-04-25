@@ -10,6 +10,7 @@ import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
+import reactor.core.publisher.Flux;
 import reactor.core.publisher.Mono;
 
 /**
@@ -29,6 +30,16 @@ public class UserService {
         return userRepository.findById(userId)
                 .switchIfEmpty(Mono.error(new BusinessException(
                         ErrorCode.USER_NOT_FOUND, HttpStatus.NOT_FOUND)))
+                .map(this::toDTO);
+    }
+
+    public Flux<UserDTO> getAllUsers() {
+        return userRepository.findAll()
+                .map(this::toDTO);
+    }
+
+    public Flux<UserDTO> getUsersByTenant(String tenantId) {
+        return userRepository.findAllByTenantId(tenantId)
                 .map(this::toDTO);
     }
 
@@ -67,9 +78,22 @@ public class UserService {
                 .doOnSuccess(u -> log.info("Updated profile userId={}", userId));
     }
 
+    public Mono<UserDTO> updateUserRole(Long userId, String role) {
+        return userRepository.findById(userId)
+                .switchIfEmpty(Mono.error(new BusinessException(
+                        ErrorCode.USER_NOT_FOUND, HttpStatus.NOT_FOUND)))
+                .flatMap(user -> {
+                    user.setRole(role);
+                    return userRepository.save(user);
+                })
+                .map(this::toDTO)
+                .doOnSuccess(u -> log.info("Updated role userId={} role={}", userId, role));
+    }
+
     private UserDTO toDTO(User user) {
         return UserDTO.builder()
                 .id(user.getId())
+                .tenantId(user.getTenantId())
                 .email(user.getEmail())
                 .displayName(user.getDisplayName())
                 .firstName(user.getFirstName())
@@ -79,6 +103,7 @@ public class UserService {
                 .avatarUrl(user.getAvatarUrl())
                 .oauthProvider(user.getOauthProvider())
                 .status(user.getStatus() != null && user.getStatus() == 1 ? "ACTIVE" : "DISABLED")
+                .role(user.getRole() != null ? user.getRole() : "TENANT_ADMIN")
                 .emailVerified(user.getEmailVerified())
                 .phoneVerified(user.getPhoneVerified())
                 .preferredCurrency(user.getPreferredCurrency())
