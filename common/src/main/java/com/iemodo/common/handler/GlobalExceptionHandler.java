@@ -9,6 +9,9 @@ import com.iemodo.common.exception.BusinessException;
 import com.iemodo.common.exception.ErrorCode;
 import com.iemodo.common.response.Response;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.context.MessageSource;
+import org.springframework.context.i18n.LocaleContextHolder;
 import org.springframework.core.annotation.Order;
 import org.springframework.core.io.buffer.DataBuffer;
 import org.springframework.http.HttpStatus;
@@ -41,6 +44,25 @@ public class GlobalExceptionHandler implements WebExceptionHandler {
             .registerModule(new JavaTimeModule())
             .disable(SerializationFeature.WRITE_DATES_AS_TIMESTAMPS);
 
+    @Autowired
+    private MessageSource messageSource;
+
+    private String resolveMessage(ErrorCode errorCode) {
+        try {
+            return messageSource.getMessage("error." + errorCode.name(), null, errorCode.getMessage(), LocaleContextHolder.getLocale());
+        } catch (Exception e) {
+            return errorCode.getMessage();
+        }
+    }
+
+    private String resolveMessage(String code, String defaultMessage) {
+        try {
+            return messageSource.getMessage(code, null, defaultMessage, LocaleContextHolder.getLocale());
+        } catch (Exception e) {
+            return defaultMessage;
+        }
+    }
+
     @Override
     public Mono<Void> handle(ServerWebExchange exchange, Throwable ex) {
         ServerHttpResponse response = exchange.getResponse();
@@ -56,7 +78,8 @@ public class GlobalExceptionHandler implements WebExceptionHandler {
         if (ex instanceof BusinessException be) {
             log.warn("Business exception [{}]: {}", be.getErrorCode(), be.getMessage());
             response.setStatusCode(be.getHttpStatus());
-            return writeResponse(response, Response.error(be.getErrorCode(), be.getMessage()));
+            String localized = resolveMessage(be.getErrorCode());
+            return writeResponse(response, Response.error(be.getErrorCode().getCode(), localized));
         }
 
         if (ex instanceof WebExchangeBindException bindEx) {
@@ -65,7 +88,7 @@ public class GlobalExceptionHandler implements WebExceptionHandler {
                     .collect(Collectors.joining("; "));
             log.warn("Validation error: {}", fieldErrors);
             response.setStatusCode(HttpStatus.BAD_REQUEST);
-            return writeResponse(response, Response.error(ErrorCode.BAD_REQUEST, fieldErrors));
+            return writeResponse(response, Response.error(ErrorCode.BAD_REQUEST.getCode(), fieldErrors));
         }
 
         if (ex instanceof ResponseStatusException rse) {
@@ -76,7 +99,7 @@ public class GlobalExceptionHandler implements WebExceptionHandler {
 
         log.error("Unhandled exception: {}", ex.getMessage(), ex);
         response.setStatusCode(HttpStatus.INTERNAL_SERVER_ERROR);
-        return writeResponse(response, Response.error(ErrorCode.INTERNAL_ERROR));
+        return writeResponse(response, Response.error(ErrorCode.INTERNAL_ERROR.getCode(), resolveMessage(ErrorCode.INTERNAL_ERROR)));
     }
 
     private Mono<Void> writeResponse(ServerHttpResponse response, Response<?> body) {

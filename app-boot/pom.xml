@@ -112,6 +112,12 @@
             <scope>runtime</scope>
         </dependency>
 
+        <!-- Micrometer Prometheus for metrics export -->
+        <dependency>
+            <groupId>io.micrometer</groupId>
+            <artifactId>micrometer-registry-prometheus</artifactId>
+        </dependency>
+
         <!-- SpringDoc OpenAPI -->
         <dependency>
             <groupId>org.springdoc</groupId>

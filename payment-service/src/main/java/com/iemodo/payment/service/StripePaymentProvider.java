@@ -83,6 +83,7 @@ public class StripePaymentProvider implements PaymentProvider {
                 });
             }
 
+            paramsBuilder.putExtraParam("idempotency_key", java.util.UUID.randomUUID().toString());
             PaymentIntent paymentIntent = PaymentIntent.create(paramsBuilder.build());
 
             return new PaymentIntentResult(
@@ -183,6 +184,7 @@ public class StripePaymentProvider implements PaymentProvider {
                 paramsBuilder.setReason(RefundCreateParams.Reason.REQUESTED_BY_CUSTOMER);
             }
 
+            paramsBuilder.putExtraParam("idempotency_key", java.util.UUID.randomUUID().toString());
             Refund refund = Refund.create(paramsBuilder.build());
 
             BigDecimal refundAmount = BigDecimal.valueOf(refund.getAmount())
