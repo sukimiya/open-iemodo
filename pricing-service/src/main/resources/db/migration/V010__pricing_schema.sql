@@ -17,7 +17,7 @@ CREATE TABLE IF NOT EXISTS currencies (
     create_time TIMESTAMP,
     update_by BIGINT,
     update_time TIMESTAMP,
-    is_valid INTEGER NOT NULL DEFAULT 1
+    is_valid         BOOLEAN         NOT NULL DEFAULT true
 );
 
 -- Insert common currencies
@@ -61,7 +61,7 @@ CREATE TABLE IF NOT EXISTS exchange_rates (
     create_time TIMESTAMP,
     update_by BIGINT,
     update_time TIMESTAMP,
-    is_valid INTEGER NOT NULL DEFAULT 1,
+    is_valid         BOOLEAN         NOT NULL DEFAULT true,
     
     CONSTRAINT unique_rate_per_time UNIQUE (from_currency, to_currency, recorded_at),
     CONSTRAINT positive_rate CHECK (rate > 0)
@@ -104,7 +104,7 @@ CREATE TABLE IF NOT EXISTS regional_pricing_config (
     create_time TIMESTAMP,
     update_by BIGINT,
     update_time TIMESTAMP,
-    is_valid INTEGER NOT NULL DEFAULT 1,
+    is_valid         BOOLEAN         NOT NULL DEFAULT true,
     
     CONSTRAINT unique_region_sku UNIQUE (country_code, sku),
     CONSTRAINT positive_markup CHECK (markup_multiplier >= 0),
@@ -133,7 +133,7 @@ CREATE TABLE IF NOT EXISTS quantity_discount_tiers (
     create_time TIMESTAMP,
     update_by BIGINT,
     update_time TIMESTAMP,
-    is_valid INTEGER NOT NULL DEFAULT 1,
+    is_valid         BOOLEAN         NOT NULL DEFAULT true,
     
     CONSTRAINT positive_quantity CHECK (min_quantity > 0),
     CONSTRAINT valid_discount CHECK (discount_percent >= 0 AND discount_percent <= 100)
@@ -158,7 +158,7 @@ CREATE TABLE IF NOT EXISTS segment_pricing (
     create_time TIMESTAMP,
     update_by BIGINT,
     update_time TIMESTAMP,
-    is_valid INTEGER NOT NULL DEFAULT 1
+    is_valid         BOOLEAN         NOT NULL DEFAULT true
 );
 
 CREATE INDEX idx_segment_pricing_segment ON segment_pricing(segment_code);

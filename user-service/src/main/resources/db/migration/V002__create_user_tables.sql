@@ -40,7 +40,7 @@ CREATE TABLE IF NOT EXISTS users (
     create_time         TIMESTAMPTZ,                                -- Creation time (UTC)
     update_by           BIGINT,                                     -- Updater user ID
     update_time         TIMESTAMPTZ,                                -- Update time (UTC)
-    is_valid            INTEGER         NOT NULL DEFAULT 1,         -- 1=Valid, 0=Soft deleted
+    is_valid         BOOLEAN         NOT NULL DEFAULT true,         -- 1=Valid, 0=Soft deleted
     
     -- Legacy field for backward compatibility
     deleted_at          TIMESTAMPTZ,
@@ -70,7 +70,7 @@ CREATE TABLE IF NOT EXISTS refresh_tokens (
     create_time TIMESTAMPTZ,    -- UTC timestamp, set by BaseEntityBeforeSaveCallback
     update_by   BIGINT,
     update_time TIMESTAMPTZ,    -- UTC timestamp, set by BaseEntityBeforeSaveCallback
-    is_valid    INTEGER         NOT NULL DEFAULT 1,
+    is_valid         BOOLEAN         NOT NULL DEFAULT true,
     
     -- Legacy fields
     revoked     BOOLEAN         NOT NULL DEFAULT FALSE,
@@ -118,7 +118,7 @@ CREATE TABLE IF NOT EXISTS user_addresses (
     create_time         TIMESTAMPTZ,    -- UTC timestamp
     update_by           BIGINT,
     update_time         TIMESTAMPTZ,    -- UTC timestamp
-    is_valid            INTEGER         NOT NULL DEFAULT 1
+    is_valid         BOOLEAN         NOT NULL DEFAULT true
 );
 
 CREATE INDEX IF NOT EXISTS idx_user_addresses_customer_id ON user_addresses (customer_id);
@@ -143,7 +143,7 @@ CREATE TABLE IF NOT EXISTS user_devices (
     create_time     TIMESTAMPTZ     NOT NULL DEFAULT NOW(),
     update_by       BIGINT,
     update_time     TIMESTAMPTZ     NOT NULL DEFAULT NOW(),
-    is_valid        INTEGER         NOT NULL DEFAULT 1,
+    is_valid         BOOLEAN         NOT NULL DEFAULT true,
     
     -- Legacy fields
     revoked         BOOLEAN         NOT NULL DEFAULT FALSE,
@@ -171,7 +171,7 @@ CREATE TABLE IF NOT EXISTS oauth_connections (
     create_time         TIMESTAMPTZ,    -- UTC timestamp
     update_by           BIGINT,
     update_time         TIMESTAMPTZ,    -- UTC timestamp
-    is_valid            INTEGER         NOT NULL DEFAULT 1,
+    is_valid         BOOLEAN         NOT NULL DEFAULT true,
 
     CONSTRAINT oauth_connections_unique UNIQUE (provider, provider_subject)
 );

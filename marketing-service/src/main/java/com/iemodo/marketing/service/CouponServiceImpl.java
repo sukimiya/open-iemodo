@@ -112,7 +112,7 @@ public class CouponServiceImpl implements CouponService {
                 .switchIfEmpty(Mono.error(new BusinessException(
                         ErrorCode.NOT_FOUND, HttpStatus.NOT_FOUND, "Coupon not found")))
                 .flatMap(coupon -> {
-                    coupon.setIsValid(0);
+                    coupon.setIsValid(false);
                     return couponRepository.save(coupon);
                 })
                 .then();

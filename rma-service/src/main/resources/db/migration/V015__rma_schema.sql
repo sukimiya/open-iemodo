@@ -23,7 +23,7 @@ CREATE TABLE IF NOT EXISTS rma_region_configs (
     create_time TIMESTAMPTZ,
     update_by   BIGINT,
     update_time TIMESTAMPTZ,
-    is_valid    INTEGER     NOT NULL DEFAULT 1,
+    is_valid         BOOLEAN         NOT NULL DEFAULT true,
 
     CONSTRAINT rma_region_configs_unique UNIQUE (region_code, tenant_id),
     CONSTRAINT rma_shipping_responsibility_check
@@ -78,7 +78,7 @@ CREATE TABLE IF NOT EXISTS rma_requests (
     create_time TIMESTAMPTZ,
     update_by   BIGINT,
     update_time TIMESTAMPTZ,
-    is_valid    INTEGER     NOT NULL DEFAULT 1,
+    is_valid         BOOLEAN         NOT NULL DEFAULT true,
 
     CONSTRAINT rma_type_check
         CHECK (type IN ('RETURN', 'EXCHANGE', 'REFUND_ONLY')),
@@ -111,7 +111,7 @@ CREATE TABLE IF NOT EXISTS rma_items (
     create_time TIMESTAMPTZ,
     update_by   BIGINT,
     update_time TIMESTAMPTZ,
-    is_valid    INTEGER     NOT NULL DEFAULT 1,
+    is_valid         BOOLEAN         NOT NULL DEFAULT true,
 
     CONSTRAINT rma_items_condition_check
         CHECK (condition IS NULL OR condition IN ('UNOPENED', 'USED', 'DAMAGED'))
@@ -134,7 +134,7 @@ CREATE TABLE IF NOT EXISTS rma_status_history (
     create_time TIMESTAMPTZ DEFAULT NOW(),
     update_by   BIGINT,
     update_time TIMESTAMPTZ,
-    is_valid    INTEGER     NOT NULL DEFAULT 1
+    is_valid         BOOLEAN         NOT NULL DEFAULT true
 );
 
 CREATE INDEX IF NOT EXISTS idx_rma_status_history_rma_id ON rma_status_history (rma_id);

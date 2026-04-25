@@ -1,6 +1,9 @@
 package com.iemodo.common.tenant;
 
 import reactor.core.publisher.Mono;
+import reactor.util.context.Context;
+
+import java.util.function.Supplier;
 
 /**
  * Constants and utilities for tenant context used in Reactor Context.
@@ -31,5 +34,52 @@ public final class TenantContext {
             }
             return Mono.empty();
         });
+    }
+
+    /**
+     * Wrap a {@link Mono} producer so that it executes within the given tenant's
+     * Reactor Context.  This is the main entry point for non-HTTP code paths
+     * (scheduled tasks, message listeners, etc.) that need a tenant context.
+     *
+     * <p>Usage:
+     * <pre>{@code
+     * TenantContext.withTenant("tenant_001", () -> repository.findAll())
+     *     .subscribe(...);
+     * }</pre>
+     *
+     * @param tenantId the tenant to use for the operation
+     * @param inner    supplier of the reactive pipeline
+     * @param <T>      result type
+     * @return a Mono that, when subscribed, will run {@code inner} inside the tenant context
+     */
+    public static <T> Mono<T> withTenant(String tenantId, Supplier<Mono<T>> inner) {
+        return Mono.defer(inner)
+                .contextWrite(ctx -> putTenantId(ctx, tenantId));
+    }
+
+    /**
+     * Wrap a {@link reactor.core.publisher.Flux} producer with a tenant context.
+     *
+     * <p>Usage:
+     * <pre>{@code
+     * TenantContext.withTenant("tenant_001", () -> repository.findAll())
+     *     .subscribe(...);
+     * }</pre>
+     *
+     * @param tenantId the tenant to use for the operation
+     * @param inner    supplier of the reactive pipeline
+     * @param <T>      result type
+     * @return a Flux that, when subscribed, will run {@code inner} inside the tenant context
+     */
+    public static <T> reactor.core.publisher.Flux<T> withTenantFlux(String tenantId, Supplier<reactor.core.publisher.Flux<T>> inner) {
+        return reactor.core.publisher.Flux.defer(inner)
+                .contextWrite(ctx -> putTenantId(ctx, tenantId));
+    }
+
+    /**
+     * Put the tenant ID into the Reactor Context.
+     */
+    public static Context putTenantId(Context ctx, String tenantId) {
+        return ctx.put(TENANT_ID_KEY, tenantId);
     }
 }

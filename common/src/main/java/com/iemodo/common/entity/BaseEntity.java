@@ -1,5 +1,6 @@
 package com.iemodo.common.entity;
 
+import lombok.Builder;
 import lombok.Data;
 import lombok.NoArgsConstructor;
 import lombok.experimental.SuperBuilder;
@@ -49,6 +50,7 @@ public abstract class BaseEntity {
      * 状态：1-启用，0-禁用
      */
     @Column("status")
+    @Builder.Default
     private Integer status = 1;
 
     /**
@@ -79,12 +81,14 @@ public abstract class BaseEntity {
      * 是否有效：1-有效，0-已删除（软删除）
      */
     @Column("is_valid")
-    private Integer isValid = 1;
+    @Builder.Default
+    private Boolean isValid = true;
 
     /**
      * 标记是否为新增操作（内部使用，不持久化）
      */
     @Transient
+    @Builder.Default
     private transient boolean isNew = true;
 
     /**

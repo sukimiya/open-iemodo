@@ -5,18 +5,6 @@ spring:
   application:
     name: notification-service
 
-  config:
-    import: "nacos:notification-service.yaml?group=IEMODO&refreshEnabled=true"
-
-  cloud:
-    nacos:
-      server-addr: ${NACOS_SERVER_ADDR:localhost:8848}
-      discovery:
-        group: IEMODO
-      config:
-        group: IEMODO
-        file-extension: yaml
-
   flyway:
     enabled: true
     url: jdbc:postgresql://${DB_HOST:localhost}:${DB_PORT:5433}/${DB_NAME:iemodo}

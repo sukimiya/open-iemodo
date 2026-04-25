@@ -5,22 +5,6 @@ spring:
   application:
     name: tenant-management-service
 
-  config:
-    import: "nacos:tenant-management.yaml?group=IEMODO&refreshEnabled=true"
-
-  cloud:
-    nacos:
-      server-addr: ${NACOS_SERVER_ADDR:localhost:8848}
-      discovery:
-        enabled: true
-        namespace: public
-        group: IEMODO
-      config:
-        enabled: true
-        namespace: public
-        group: IEMODO
-        file-extension: yaml
-
   # R2DBC for reactive database access
   r2dbc:
     url: r2dbc:postgresql://localhost:5433/iemodo?schema=tenant_meta

@@ -55,7 +55,7 @@ CREATE TABLE IF NOT EXISTS payments (
     create_time TIMESTAMP,
     update_by BIGINT,
     update_time TIMESTAMP,
-    is_valid INTEGER NOT NULL DEFAULT 1
+    is_valid         BOOLEAN         NOT NULL DEFAULT true
 );
 
 -- Indexes for payments
@@ -106,7 +106,7 @@ CREATE TABLE IF NOT EXISTS refunds (
     create_time TIMESTAMP,
     update_by BIGINT,
     update_time TIMESTAMP,
-    is_valid INTEGER NOT NULL DEFAULT 1
+    is_valid         BOOLEAN         NOT NULL DEFAULT true
 );
 
 -- Indexes for refunds
@@ -148,7 +148,7 @@ CREATE TABLE IF NOT EXISTS payment_audit_logs (
     create_time TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
     update_by BIGINT,
     update_time TIMESTAMP,
-    is_valid INTEGER NOT NULL DEFAULT 1
+    is_valid         BOOLEAN         NOT NULL DEFAULT true
 );
 
 CREATE INDEX idx_payment_audit_logs_payment_id ON payment_audit_logs(payment_id);

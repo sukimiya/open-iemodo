@@ -17,29 +17,36 @@ public interface PaymentRepository extends ReactiveCrudRepository<Payment, Long>
 
     Mono<Payment> findByPaymentNo(String paymentNo);
 
+    @Query("SELECT * FROM payments WHERE payment_no = :paymentNo AND is_valid = true")
     Mono<Payment> findByPaymentNoAndIsValid(String paymentNo);
 
+    @Query("SELECT * FROM payments WHERE id = :id AND is_valid = true")
     Mono<Payment> findByIdAndIsValid(Long id);
 
+    @Query("SELECT * FROM payments WHERE order_id = :orderId AND is_valid = true")
     Flux<Payment> findByOrderIdAndIsValid(Long orderId);
 
+    @Query("SELECT * FROM payments WHERE order_no = :orderNo AND is_valid = true")
     Flux<Payment> findByOrderNoAndIsValid(String orderNo);
 
+    @Query("SELECT * FROM payments WHERE customer_id = :customerId AND is_valid = true ORDER BY create_time DESC")
     Flux<Payment> findByCustomerIdAndIsValidOrderByCreateTimeDesc(Long customerId);
 
+    @Query("SELECT * FROM payments WHERE payment_status = :paymentStatus AND is_valid = true")
     Flux<Payment> findByPaymentStatusAndIsValid(Payment.PaymentStatus paymentStatus);
 
+    @Query("SELECT * FROM payments WHERE payment_status = :paymentStatus AND expired_at < :now AND is_valid = true")
     Flux<Payment> findByPaymentStatusAndExpiredAtBeforeAndIsValid(Payment.PaymentStatus paymentStatus, Instant now);
 
-    @Query("SELECT * FROM payments WHERE tenant_id = :tenantId AND is_valid = 1 ORDER BY create_time DESC LIMIT :limit OFFSET :offset")
+    @Query("SELECT * FROM payments WHERE tenant_id = :tenantId AND is_valid = true ORDER BY create_time DESC LIMIT :limit OFFSET :offset")
     Flux<Payment> findByTenantId(String tenantId, int limit, int offset);
 
-    @Query("SELECT COUNT(*) FROM payments WHERE tenant_id = :tenantId AND is_valid = 1")
+    @Query("SELECT COUNT(*) FROM payments WHERE tenant_id = :tenantId AND is_valid = true")
     Mono<Long> countByTenantId(String tenantId);
 
     Mono<Boolean> existsByPaymentNo(String paymentNo);
 
-    @Query("SELECT * FROM payments WHERE third_party_txn_id = :txnId AND is_valid = 1")
+    @Query("SELECT * FROM payments WHERE third_party_txn_id = :txnId AND is_valid = true")
     Mono<Payment> findByThirdPartyTxnId(String txnId);
 
     @Query("UPDATE payments SET status = :status, update_time = NOW() WHERE id = :id")
@@ -58,6 +65,6 @@ public interface PaymentRepository extends ReactiveCrudRepository<Payment, Long>
      * Find payments stuck in PENDING or PROCESSING with a known third-party transaction ID,
      * created before {@code cutoff}. Used by the reconciliation job to detect lost webhooks.
      */
-    @Query("SELECT * FROM payments WHERE payment_status IN ('PENDING', 'PROCESSING') AND create_time < :cutoff AND third_party_txn_id IS NOT NULL AND is_valid = 1")
+    @Query("SELECT * FROM payments WHERE payment_status IN ('PENDING', 'PROCESSING') AND create_time < :cutoff AND third_party_txn_id IS NOT NULL AND is_valid = true")
     Flux<Payment> findStuckPayments(Instant cutoff);
 }

@@ -43,7 +43,7 @@ CREATE TABLE IF NOT EXISTS warehouses (
     create_time         TIMESTAMPTZ,
     update_by           BIGINT,
     update_time         TIMESTAMPTZ,
-    is_valid            INTEGER         NOT NULL DEFAULT 1
+    is_valid         BOOLEAN         NOT NULL DEFAULT true
 );
 
 CREATE INDEX IF NOT EXISTS idx_warehouses_country ON warehouses (country_code);
@@ -85,7 +85,7 @@ CREATE TABLE IF NOT EXISTS inventory (
     create_time         TIMESTAMPTZ,
     update_by           BIGINT,
     update_time         TIMESTAMPTZ,
-    is_valid            INTEGER         NOT NULL DEFAULT 1,
+    is_valid         BOOLEAN         NOT NULL DEFAULT true,
     
     UNIQUE(warehouse_id, sku_id)
 );
@@ -125,7 +125,7 @@ CREATE TABLE IF NOT EXISTS inventory_transactions (
     create_time         TIMESTAMPTZ,
     update_by           BIGINT,
     update_time         TIMESTAMPTZ,
-    is_valid            INTEGER         NOT NULL DEFAULT 1
+    is_valid         BOOLEAN         NOT NULL DEFAULT true
 );
 
 CREATE INDEX IF NOT EXISTS idx_transactions_warehouse ON inventory_transactions (warehouse_id);
@@ -169,7 +169,7 @@ CREATE TABLE IF NOT EXISTS stock_transfers (
     create_time         TIMESTAMPTZ,
     update_by           BIGINT,
     update_time         TIMESTAMPTZ,
-    is_valid            INTEGER         NOT NULL DEFAULT 1
+    is_valid         BOOLEAN         NOT NULL DEFAULT true
 );
 
 CREATE INDEX IF NOT EXISTS idx_transfers_from ON stock_transfers (from_warehouse_id);
@@ -198,7 +198,7 @@ CREATE TABLE IF NOT EXISTS stock_transfer_items (
     create_time         TIMESTAMPTZ,
     update_by           BIGINT,
     update_time         TIMESTAMPTZ,
-    is_valid            INTEGER         NOT NULL DEFAULT 1
+    is_valid         BOOLEAN         NOT NULL DEFAULT true
 );
 
 CREATE INDEX IF NOT EXISTS idx_transfer_items_transfer ON stock_transfer_items (transfer_id);
@@ -235,7 +235,7 @@ CREATE TABLE IF NOT EXISTS restock_recommendations (
     create_time         TIMESTAMPTZ,
     update_by           BIGINT,
     update_time         TIMESTAMPTZ,
-    is_valid            INTEGER         NOT NULL DEFAULT 1
+    is_valid         BOOLEAN         NOT NULL DEFAULT true
 );
 
 CREATE INDEX IF NOT EXISTS idx_restock_warehouse ON restock_recommendations (warehouse_id);

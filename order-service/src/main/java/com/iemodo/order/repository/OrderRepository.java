@@ -14,6 +14,7 @@ public interface OrderRepository extends R2dbcRepository<Order, Long> {
 
     Mono<Order> findByOrderNo(String orderNo);
 
+    @Query("SELECT * FROM orders WHERE customer_id = :customerId ORDER BY create_time DESC")
     Flux<Order> findByCustomerIdOrderByCreatedAtDesc(Long customerId, Pageable pageable);
 
     Mono<Long> countByCustomerId(Long customerId);

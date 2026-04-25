@@ -33,7 +33,7 @@ public class UserCoupon extends BaseEntity {
     @Column("coupon_code")
     private String couponCode;
 
-    @Column("coupon_status")
+    @Column("coupon_usage_status")
     private UserCouponStatus couponStatus;
 
     @Column("order_id")

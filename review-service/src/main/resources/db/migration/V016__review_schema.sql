@@ -27,7 +27,7 @@ CREATE TABLE IF NOT EXISTS reviews (
     create_time     TIMESTAMPTZ,
     update_by       BIGINT,
     update_time     TIMESTAMPTZ,
-    is_valid        INTEGER         NOT NULL DEFAULT 1,
+    is_valid         BOOLEAN         NOT NULL DEFAULT true,
 
     CONSTRAINT reviews_status_check
         CHECK (review_status IN ('PENDING', 'APPROVED', 'REJECTED')),
@@ -54,7 +54,7 @@ CREATE TABLE IF NOT EXISTS review_replies (
     create_time     TIMESTAMPTZ,
     update_by       BIGINT,
     update_time     TIMESTAMPTZ,
-    is_valid        INTEGER         NOT NULL DEFAULT 1,
+    is_valid         BOOLEAN         NOT NULL DEFAULT true,
 
     CONSTRAINT review_replies_type_check
         CHECK (replier_type IN ('MERCHANT', 'PLATFORM'))

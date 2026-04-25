@@ -2,7 +2,7 @@ package com.iemodo.common.db;
 
 import io.r2dbc.proxy.core.QueryExecutionInfo;
 import io.r2dbc.proxy.core.QueryInfo;
-import io.r2dbc.proxy.listener.QueryExecutionListener;
+import io.r2dbc.proxy.listener.ProxyExecutionListener;
 
 /**
  * R2DBC proxy listener that measures query execution time and feeds the
@@ -10,7 +10,7 @@ import io.r2dbc.proxy.listener.QueryExecutionListener;
  *
  * <p>Wired via {@link io.r2dbc.proxy.ProxyConnectionFactory}.
  */
-public class SlowQueryProxyListener implements QueryExecutionListener {
+public class SlowQueryProxyListener implements ProxyExecutionListener {
 
     private final SlowQueryProperties props;
     private final SlowQueryCircuitBreaker circuitBreaker;

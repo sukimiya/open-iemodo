@@ -89,7 +89,7 @@ public class User extends BaseEntity {
      */
     public void softDelete() {
         setStatus(0); // Disabled
-        setIsValid(0); // Invalid/Deleted
+        setIsValid(false); // Invalid/Deleted
         this.deletedAt = Instant.now();
     }
 

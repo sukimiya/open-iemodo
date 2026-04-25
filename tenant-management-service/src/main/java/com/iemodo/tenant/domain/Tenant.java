@@ -84,6 +84,6 @@ public class Tenant extends BaseEntity {
 
     public void softDelete() {
         this.tenantStatus = "DELETED";
-        setIsValid(0);
+        setIsValid(false);
     }
 }

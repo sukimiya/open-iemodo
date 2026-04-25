@@ -13,18 +13,21 @@ import reactor.core.publisher.Mono;
 @Repository
 public interface SkuRepository extends ReactiveCrudRepository<Sku, Long> {
 
+    @Query("SELECT * FROM skus WHERE product_id = :productId AND is_valid = true")
     Flux<Sku> findAllByProductIdAndIsValid(Long productId);
 
     Mono<Sku> findBySkuCode(String skuCode);
 
+    @Query("SELECT * FROM skus WHERE id = :id AND is_valid = true")
     Mono<Sku> findByIdAndIsValid(Long id);
 
     Mono<Boolean> existsBySkuCode(String skuCode);
 
+    @Query("SELECT EXISTS(SELECT 1 FROM skus WHERE product_id = :productId AND attribute_hash = :attributeHash AND is_valid = true)")
     Mono<Boolean> existsByProductIdAndAttributeHashAndIsValid(Long productId, String attributeHash);
 
     @Query("SELECT * FROM skus WHERE product_id = :productId AND sku_status = 'ACTIVE' " +
-           "AND stock_quantity > 0 AND is_valid = 1")
+           "AND stock_quantity > 0 AND is_valid = true")
     Flux<Sku> findAvailableByProductId(Long productId);
 
     @Query("UPDATE skus SET stock_quantity = stock_quantity - :quantity, " +
@@ -38,5 +41,4 @@ public interface SkuRepository extends ReactiveCrudRepository<Sku, Long> {
     @Query("UPDATE skus SET reserved_quantity = GREATEST(0, reserved_quantity - :quantity) WHERE id = :id")
     Mono<Integer> releaseStock(Long id, int quantity);
 
-    Object findByIdAndDeletedAtIsNull(long l);
 }

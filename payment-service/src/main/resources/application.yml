@@ -5,22 +5,6 @@ spring:
   application:
     name: payment-service
 
-  config:
-    import: "nacos:payment-service.yaml?group=IEMODO&refreshEnabled=true"
-
-  cloud:
-    nacos:
-      server-addr: ${NACOS_SERVER_ADDR:localhost:8848}
-      discovery:
-        enabled: true
-        namespace: public
-        group: IEMODO
-      config:
-        enabled: true
-        namespace: public
-        group: IEMODO
-        file-extension: yaml
-
   r2dbc:
     url: r2dbc:postgresql://localhost:5433/iemodo_platform
     username: iemodo
@@ -43,23 +27,6 @@ spring:
       port: 6379
       password: redis123
       database: 0
-
-  cloud:
-    nacos:
-      server-addr: localhost:8848
-      username: nacos
-      password: nacos
-      discovery:
-        enabled: true
-        namespace: public
-        group: DEFAULT_GROUP
-      config:
-        enabled: true
-        namespace: public
-        group: DEFAULT_GROUP
-        file-extension: yaml
-        import-check:
-          enabled: false
 
 # Stripe Configuration
 stripe:

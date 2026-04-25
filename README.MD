@@ -9,13 +9,17 @@
 ![WebFlux](https://img.shields.io/badge/WebFlux-Reactive-brightblue)
 ![License](https://img.shields.io/badge/License-Apache%202.0-blue)
 
-**一个面向全球、支持多租户的开源跨境电商微服务系统，采用响应式架构、云原生设计。**
+**一个面向全球、支持多租户的开源跨境电商系统，采用响应式架构、云原生设计。**
+
+> 本项目提供两种部署模式：
+> - **`main` 分支** — 完整 16 微服务架构（Spring Cloud Alibaba + Nacos）
+> - **`iemodo-lite` 分支** — 单 JAR 单体版本（极致省资源）
 
 ***
 
 ## 📋 项目概述
 
-**Avacha** 是一个基于 Spring Cloud Alibaba 和 Spring WebFlux 的**企业级跨境电商微服务平台**（技术代号：iemodo），专为全球商家提供多店铺管理、订单处理、支付集成等核心功能。该项目采用**全链路响应式架构**和**Schema-per-Tenant 多租户隔离方案**，支持高并发场景（单节点 1000+ QPS）。
+**Avacha** 是一个基于 Spring Cloud Alibaba 和 Spring WebFlux 的**企业级跨境电商平台**（技术代号：iemodo），专为全球商家提供多店铺管理、订单处理、支付集成等核心功能。该项目采用**全链路响应式架构**和**Schema-per-Tenant 多租户隔离方案**，支持高并发场景（单节点 1000+ QPS）。
 
 ### 核心特性
 
@@ -27,7 +31,39 @@
 
 ***
 
-## 🏗️ 技术架构
+## 🔀 分支说明
+
+### main 分支（微服务版）
+
+完整的 16 微服务架构，适用于中大型部署。
+
+```
+16 个微服务 + 3 个基础设施 (PostgreSQL + Redis + Nacos)
+内存需求: ~5GB+
+```
+
+详见 [README](./README.MD)（当前文档）。
+
+### iemodo-lite 分支（单体极简版）
+
+将所有服务合并为单个 JAR，移除 Nacos，适用于小型化部署和开发环境。
+
+```
+1 个 JAR + 2 个基础设施 (PostgreSQL + Redis)
+内存需求: ~1.5GB
+一台 1C2G 的轻量云服务器即可运行
+```
+
+**构建运行：**
+```bash
+git checkout iemodo-lite
+mvn package -pl app-boot -am -Dmaven.test.skip=true
+java -jar app-boot/target/app-boot-1.0.0-SNAPSHOT.jar
+```
+
+***
+
+## 🏗️ 技术架构（微服务版）
 
 ### 整体架构图
 
@@ -104,6 +140,7 @@ iemodo/                              ← Maven 多模块项目
 ├── README.md                        ← 本文档
 ├── pom.xml                          ← 父 POM（版本管理）
 ├── docker-compose.yml               ← 本地开发环境一键启动
+├── RULE.md                          ← Claude Code 会话指南
 │
 ├── common/                          ← 公共模块（所有服务依赖）
 │   ├── pom.xml
@@ -120,224 +157,127 @@ iemodo/                              ← Maven 多模块项目
 │       │   ├── TenantContext.java
 │       │   ├── TenantIdWebFilter.java
 │       │   ├── PostgresTenantConnectionFactory.java
-│       │   └── TenantConnectionFactoryConfig.java
-│       └── handler/
-│           └── GlobalExceptionHandler.java
+│       │   └── MultitenantR2dbcConfiguration.java
+│       ├── entity/                  ← 基础实体(BaseEntity)
+│       ├── db/                      ← 慢查询熔断器
+│       ├── cache/                   ← 缓存工具
+│       ├── audit/                   ← 审计日志
+│       ├── config/                  ← 通用配置(OpenAPI)
+│       ├── context/                 ← Reactor 上下文
+│       ├── filter/                  ← 日志 WebFilter
+│       └── handler/                 ← 全局异常处理
+│
+├── app-boot/                        ← [iemodo-lite] 单体入口（仅 lite 分支）
+│   ├── pom.xml
+│   └── src/main/java/com/iemodo/
+│       ├── IemodoApplication.java
+│       └── config/
+│           ├── JwtWebFilter.java
+│           ├── LiteCorsConfig.java
+│           ├── LiteGatewayProperties.java
+│           └── LiteR2dbcConfig.java
 │
 ├── api-gateway/                     ← 网关服务 (Port: 8080)
-│   ├── pom.xml
-│   └── src/main/java/com/iemodo/gateway/
-│       ├── GatewayApplication.java
-│       ├── config/
-│       │   ├── RouteConfig.java
-│       │   ├── SentinelConfig.java
-│       │   └── CorsConfig.java
-│       ├── filter/
-│       │   ├── JwtAuthFilter.java
-│       │   ├── TenantFilter.java
-│       │   └── TraceIdFilter.java
-│       └── handler/
-│           └── GatewayExceptionHandler.java
-│
 ├── user-service/                    ← 用户服务 (Port: 8081)
-│   ├── pom.xml
-│   └── src/main/java/com/iemodo/user/
-│       ├── UserServiceApplication.java
-│       ├── config/
-│       │   ├── MultitenantR2dbcConfig.java
-│       │   ├── SecurityConfig.java
-│       │   ├── JwtConfig.java
-│       │   └── RedisConfig.java
-│       ├── domain/
-│       │   ├── User.java
-│       │   ├── RefreshToken.java
-│       │   └── UserDevice.java
-│       ├── repository/
-│       │   ├── UserRepository.java
-│       │   └── RefreshTokenRepository.java
-│       ├── service/
-│       │   ├── AuthService.java
-│       │   ├── UserService.java
-│       │   └── JwtService.java
-│       ├── controller/
-│       │   └── AuthController.java
-│       └── util/
-│           └── JwtUtil.java
-│
-├── order-service/                   ← 订单服务 (Port: 8083)
-│   ├── pom.xml
-│   └── src/main/java/com/iemodo/order/
-│       ├── OrderServiceApplication.java
-│       ├── config/
-│       ├── domain/
-│       │   ├── Order.java
-│       │   └── OrderItem.java
-│       ├── repository/
-│       ├── service/
-│       │   └── OrderService.java
-│       └── controller/
-│           └── OrderController.java
-│
 ├── product-service/                 ← 商品服务 (Port: 8082)
-│   ├── pom.xml
-│   └── src/main/java/com/iemodo/product/
-│       ├── ProductServiceApplication.java
-│       ├── config/
-│       ├── domain/
-│       │   ├── Product.java
-│       │   └── SKU.java
-│       ├── repository/
-│       ├── service/
-│       └── controller/
+├── order-service/                   ← 订单服务 (Port: 8083)
+├── inventory-service/               ← 库存服务 (Port: 8084)
+├── payment-service/                 ← 支付服务 (Port: 8085)
+├── pricing-service/                 ← 定价服务 (Port: 8086)
+├── map-service/                     ← 地图服务 (Port: 8087)
+├── tax-service/                     ← 税务服务 (Port: 8088)
+├── marketing-service/               ← 营销服务 (Port: 8089)
+├── file-service/                    ← 文件服务 (Port: 8090)
+├── tenant-management-service/       ← 租户管理 (Port: 8091)
+├── fulfillment-service/             ← 履约服务 (Port: 8092)
+├── rma-service/                     ← 售后/RMA (Port: 8095)
+├── review-service/                  ← 评价服务 (Port: 8096)
+├── notification-service/            ← 通知服务 (Port: 8093)
 │
-└── payment-service/                 ← 支付服务 (Port: 8085)
-    ├── pom.xml
-    └── src/main/java/com/iemodo/payment/
-        ├── PaymentServiceApplication.java
-        ├── config/
-        ├── service/
-        │   └── StripePaymentService.java
-        └── controller/
-            └── PaymentController.java
+├── docs/                            ← 文档
+│   ├── remind/                      ← 项目记忆（Claude 自动维护）
+│   └── plan/                        ← 实施计划
+├── scripts/                         ← 脚本
+└── Dockerfile                       ← [iemodo-lite] 单体 Dockerfile
 ```
 
 ***
 
 ## 🚀 快速开始
 
-### 前置条件
-
-- **Java 21**（或更高版本）
-- **Docker & Docker Compose**（用于启动基础设施）
-- **Maven 3.9+**
-- **Git**
-
-### 1️⃣ 克隆项目
+### 微服务版（main 分支）
 
 ```bash
-git clone https://github.com/sukimiya/open-iemodo.git
-cd open-iemodo
-```
+git checkout main
 
-### 2️⃣ 启动基础设施
-
-```bash
-# 启动 PostgreSQL 15 + Redis 7 + Nacos 2.3
+# 启动基础设施
 docker compose up -d
 
-# 验证服务状态
-docker compose ps
-
-# 查看日志
-docker compose logs -f postgres
-docker compose logs -f redis
-docker compose logs -f nacos
-```
-
-服务地址：
-
-- PostgreSQL: localhost:5433 (用户名: iemodo / 密码: iemodo123)
-- Redis: localhost:6379
-- Nacos 控制台: http://localhost:8848/nacos (nacos/nacos)
-
-### 3️⃣ 生成 RSA 密钥对（用于 JWT）
-
-```bash
-# 在项目根目录执行
+# 生成 JWT 密钥对
 mkdir -p user-service/src/main/resources/jwt
 mkdir -p api-gateway/src/main/resources/jwt
-
-# 生成 2048-bit RSA 密钥对
 openssl genrsa -out private.pem 2048
 openssl rsa -in private.pem -pubout -out public.pem
-
-# 复制到各服务
 cp private.pem user-service/src/main/resources/jwt/
 cp public.pem user-service/src/main/resources/jwt/
 cp public.pem api-gateway/src/main/resources/jwt/
 
-# 清理临时文件
-rm private.pem public.pem
-```
-
-### 4️⃣ 启动微服务
-
-```bash
-# 在三个不同的终端窗口中启动以下服务
-
-# 终端 1: 用户服务
-JAVA_HOME=/usr/libexec/java_home -V 2>&1 | grep 21
+# 启动服务
 mvn spring-boot:run -pl user-service
-
-# 终端 2: 订单服务
 mvn spring-boot:run -pl order-service
-
-# 终端 3: API 网关
 mvn spring-boot:run -pl api-gateway
 ```
 
-### 5️⃣ 验证服务
+### 单体版（iemodo-lite 分支）
 
 ```bash
-# 1. 用户注册
+git checkout iemodo-lite
+
+# 启动基础设施（仅 PostgreSQL + Redis，无需 Nacos）
+docker compose up -d
+
+# 生成 JWT 密钥对
+mkdir -p app-boot/src/main/resources/jwt
+openssl genrsa -out private.pem 2048
+openssl rsa -in private.pem -pubout -out public.pem
+cp private.pem user-service/src/main/resources/jwt/
+cp public.pem user-service/src/main/resources/jwt/
+cp public.pem api-gateway/src/main/resources/jwt/
+cp private.pem app-boot/src/main/resources/jwt/
+cp public.pem app-boot/src/main/resources/jwt/
+
+# 构建并运行
+mvn package -pl app-boot -am -Dmaven.test.skip=true
+java -jar app-boot/target/app-boot-1.0.0-SNAPSHOT.jar
+```
+
+### 验证服务
+
+```bash
+# 用户注册
 curl -X POST http://localhost:8080/uc/api/v1/auth/register \
   -H "Content-Type: application/json" \
   -H "X-TenantID: tenant_001" \
-  -d '{
-    "email":"test@example.com",
-    "password":"Test1234!",
-    "displayName":"Test User"
-  }'
-
-# 预期响应:
-# {"code":200,"message":"success","data":{"accessToken":"eyJ...","refreshToken":"..."},"timestamp":"2026-03-21T10:30:00Z"}
-
-# 2. 用户登录
-curl -X POST http://localhost:8080/uc/api/v1/auth/login \
-  -H "Content-Type: application/json" \
-  -H "X-TenantID: tenant_001" \
-  -d '{
-    "email":"test@example.com",
-    "password":"Test1234!"
-  }'
-
-# 3. 初始化库存（在 Redis 中）
-redis-cli -a redis123 SET stock:tenant_001:SKU-001 100
-
-# 4. 创建订单
-curl -X POST http://localhost:8080/oc/api/v1/orders \
-  -H "Content-Type: application/json" \
-  -H "X-TenantID: tenant_001" \
-  -H "Authorization: Bearer <access_token>" \
-  -d '{
-    "customerId": 1,
-    "currency": "USD",
-    "items": [
-      {
-        "productId": 1,
-        "sku": "SKU-001",
-        "quantity": 2,
-        "unitPrice": 19.99
-      }
-    ]
-  }'
+  -d '{"email":"test@example.com","password":"Test1234!","displayName":"Test User"}'
 ```
 
 ***
 
-## 📋 已实现功能
+## 📋 功能清单
 
-### ✅ 第一期 MVP (完成)
+### ✅ 已完成
 
 **基础设施**
-- Nacos 服务注册与配置中心
+- Nacos 服务注册与配置中心（微服务版）
 - Spring Cloud Gateway 网关（带 Sentinel 限流）
 - 多租户路由基础架构（Schema-per-Tenant）
 - Docker Compose 一键启动
+- 慢查询熔断器
+- TraceID 链路追踪
 
 **用户服务**
 - 邮箱 + 密码注册/登录
-- OAuth2 认证框架（预留 Google/微信社交登录）
+- OAuth2 认证框架（Google 社交登录预留）
 - JWT Token 生成与校验（RS256 非对称签名）
 - 刷新令牌机制（30 天有效期）
 - Token 黑名单管理（Redis）
@@ -349,24 +289,54 @@ curl -X POST http://localhost:8080/oc/api/v1/orders \
 - Redis Lua 原子库存预扣（防止超卖）
 - 订单查询与列表（分页）
 - 取消订单（库存回滚）
+- 乐观锁 + 幂等令牌
+- 支付超时自动关单
 
-**通用基础设施**
-- 统一响应格式
-- 全局异常处理（对应错误码）
-- 链路追踪（TraceID）
-- Flyway 数据库版本管理
-- 多租户 R2DBC 数据源路由
+**商品服务**
+- 商品 CRUD 和 SKU 管理
+- 分类和品牌管理
+- 多国家可见性配置
 
-## 🔄 第二期规划
+**库存服务**
+- 多仓库库存管理
+- Redis + DB 双重防超卖
+- 库存事务记录
 
-| 功能           | 说明                       | 优先级 |
-| -------------- | -------------------------- | ------ |
-| 商品服务       | 商品 CRUD、SKU 管理、库存初始化 | P0     |
-| 支付服务       | Stripe 集成、支付回调处理     | P0     |
-| 库存服务       | 独立库存管理、异步扣减确认     | P1     |
-| 多语言/多币种  | 国际化支持                  | P2     |
-| 物流/WMS       | 订单配送流程                | P2     |
-| 风控/反欺诈    | 交易监控引擎                | P3     |
+**支付服务**
+- Stripe 支付集成框架
+- 支付回调解耦与幂等性
+- 定时对账任务
+- 退款处理
+
+**定价服务**
+- 区域定价 + 货币转换
+- 阶梯折扣 + 客户段定价
+- PricingGuard 异常检测
+
+**税务服务**
+- VAT/GST/美国销售税/日本消费税
+- B2B 免税检查
+
+**其他服务**
+- 营销服务（优惠券管理）
+- 履约服务（仓库分配评分）
+- 评价服务（审核工作流）
+- 售后/RMA 服务（区域规则）
+- 通知服务（邮件/SMS/推送框架）
+- 文件服务（MinIO 集成）
+- 租户管理（Schema 自动创建）
+- 地图服务（定位/距离计算框架）
+
+### 🔄 规划中
+
+| 功能 | 说明 | 优先级 |
+| --- | --- | --- |
+| 商品服务完善 | 商品 CRUD、SKU 管理、库存初始化 | P0 |
+| 支付服务完善 | Stripe 集成、支付回调处理 | P0 |
+| 库存服务完善 | 独立库存管理、异步扣减确认 | P1 |
+| 多语言/多币种 | 国际化支持 | P2 |
+| 物流/WMS | 订单配送流程 | P2 |
+| 风控/反欺诈 | 交易监控引擎 | P3 |
 
 ***
 
@@ -390,45 +360,6 @@ PostgreSQL 实例
     └── 系统配置表（共享）
 ```
 
-租户识别链路：
-
-```
-HTTP Request (X-TenantID: tenant_001)
-    ↓
-TenantIdWebFilter
-    ↓ contextWrite(ctx → ctx.put(TENANT_ID, "tenant_001"))
-Reactor Context
-    ↓
-PostgresTenantConnectionFactory.determineCurrentLookupKey()
-    ↓ Mono.deferContextual → ctx.get(TENANT_ID)
-路由到 ConnectionFactory("tenant_001")
-    ↓ 连接到 PostgreSQL 的 schema_tenant_001
-```
-
-### 响应式全链路
-
-遵循 Spring WebFlux 最佳实践：
-
-```java
-// ❌ 错误做法（阻塞）
-public User getUser(Long userId) {
-    return userRepository.findById(userId);  // 同步 JDBC
-}
-
-// ✅ 正确做法（非阻塞）
-public Mono<User> getUser(Long userId) {
-    return userRepository.findById(userId);  // R2DBC 返回 Mono
-}
-
-// ✅ 链式操作
-public Mono<OrderDTO> createOrder(Mono<CreateOrderRequest> request) {
-    return request
-        .flatMap(req -> inventoryService.preDeduct(req.getSku(), req.getQuantity()))
-        .flatMap(success -> orderService.saveOrder(...))
-        .map(order -> orderMapper.toDTO(order));
-}
-```
-
 ### 缓存架构
 
 多级缓存递进：
@@ -450,248 +381,22 @@ public Mono<OrderDTO> createOrder(Mono<CreateOrderRequest> request) {
 └──────────────────┘
 ```
 
-### 库存扣减流程
-
-使用 Redis Lua 脚本保证原子性，防止超卖：
-
-```lua
--- 库存扣减 Lua 脚本（原子操作）
-local stock = tonumber(redis.call('get', KEYS[1]));
-if stock == nil then
-    return -1;  -- key 不存在
-end
-if stock >= tonumber(ARGV[1]) then
-    redis.call('decrby', KEYS[1], ARGV[1]);
-    return 1;   -- 成功
-else
-    return 0;   -- 库存不足
-end
-```
-
 ***
 
 ## 📊 API 接口规范
 
 ### 请求头规范
 
-| Header        | 必填 | 说明                              |
-| ------------- | ---- | --------------------------------- |
-| X-TenantID    | 是   | 租户标识（路由到对应 Schema）      |
-| Authorization | 否   | Bearer <JWT_TOKEN>（认证端点除外） |
-| X-Request-ID  | 否   | 请求追踪 ID（网关自动生成）        |
-| Content-Type  | 是   | application/json                  |
-
-### 响应格式
-
-```json
-{
-  "code": 200,
-  "message": "success",
-  "data": {
-    // 业务数据
-  },
-  "timestamp": "2026-03-21T10:30:00Z"
-}
-```
-
-### 错误码定义
-
-| 错误码 | HTTP 状态 | 含义                      |
-| ------ | --------- | ------------------------- |
-| 200    | 200       | 成功                      |
-| 400    | 400       | 参数错误                  |
-| 401    | 401       | 未授权（缺少/无效 JWT）    |
-| 403    | 403       | 禁止访问                  |
-| 404    | 404       | 资源不存在                |
-| 409    | 409       | 库存不足                  |
-| 4001   | 400       | 租户不存在                |
-| 500    | 500       | 系统错误                  |
+| Header | 必填 | 说明 |
+| --- | --- | --- |
+| X-TenantID | 是 | 租户标识（路由到对应 Schema） |
+| Authorization | 否 | Bearer \<JWT_TOKEN\>（认证端点除外） |
+| X-Request-ID | 否 | 请求追踪 ID（网关自动生成） |
+| Content-Type | 是 | application/json |
 
 ### 核心 API 端点
 
-#### 认证模块
-
-```http
-# 用户注册
-POST /uc/api/v1/auth/register
-Content-Type: application/json
-X-TenantID: tenant_001
-
-{
-  "email": "user@example.com",
-  "password": "Secure1234!",
-  "displayName": "User Name"
-}
-
-# 响应 (200 OK)
-{
-  "code": 200,
-  "message": "success",
-  "data": {
-    "userId": 10001,
-    "accessToken": "eyJhbGciOiJSUzI1NiIsInR5cCI6IkpXVCJ9...",
-    "refreshToken": "eyJhbGciOiJIUzI1NiJ9...",
-    "expiresIn": 3600
-  }
-}
-
-# 用户登录
-POST /uc/api/v1/auth/login
-Content-Type: application/json
-X-TenantID: tenant_001
-
-{
-  "email": "user@example.com",
-  "password": "Secure1234!"
-}
-
-# 获取当前用户
-GET /uc/api/v1/users/me
-Authorization: Bearer <access_token>
-X-TenantID: tenant_001
-
-# 登出
-POST /uc/api/v1/auth/logout
-Authorization: Bearer <access_token>
-X-TenantID: tenant_001
-```
-
-#### 订单模块
-
-```http
-# 创建订单
-POST /oc/api/v1/orders
-Content-Type: application/json
-Authorization: Bearer <access_token>
-X-TenantID: tenant_001
-
-{
-  "customerId": 10001,
-  "currency": "USD",
-  "shippingAddress": {
-    "name": "John Doe",
-    "phone": "+1234567890",
-    "address": "123 Main St, New York"
-  },
-  "items": [
-    {
-      "productId": 1001,
-      "sku": "SKU-001",
-      "quantity": 2,
-      "unitPrice": 19.99
-    }
-  ]
-}
-
-# 获取订单详情
-GET /oc/api/v1/orders/{orderId}
-Authorization: Bearer <access_token>
-X-TenantID: tenant_001
-
-# 查询订单列表（分页）
-GET /oc/api/v1/orders?page=1&pageSize=20&status=PAID
-Authorization: Bearer <access_token>
-X-TenantID: tenant_001
-
-# 取消订单
-POST /oc/api/v1/orders/{orderId}/cancel
-Authorization: Bearer <access_token>
-X-TenantID: tenant_001
-```
-
-***
-
-## 🧪 测试
-
-### 单元测试
-
-```bash
-# 运行所有测试
-mvn clean test
-
-# 运行特定模块的测试
-mvn clean test -pl user-service
-mvn clean test -pl order-service
-
-# 运行特定测试类
-mvn clean test -Dtest=AuthServiceTest
-```
-
-### 集成测试（TestContainers）
-
-项目使用 TestContainers 进行集成测试，自动启动真实 PostgreSQL 和 Redis：
-
-```java
-@IntegrationTest
-class AuthServiceIntegrationTest {
-    
-    @Test
-    void shouldRegisterAndLoginUser() {
-        // 使用真实容器验证完整流程
-        User user = authService.register("test@example.com", "password").block();
-        Mono<TokenResponse> result = authService.login("test@example.com", "password");
-        
-        StepVerifier.create(result)
-            .assertNext(token -> assertThat(token.getAccessToken()).isNotBlank())
-            .verifyComplete();
-    }
-}
-```
-
-### 冒烟测试脚本
-
-```bash
-# 启动所有服务后运行
-bash scripts/smoke-test.sh
-```
-
-***
-
-## 📈 性能指标
-
-| 指标            | 目标             | 当前      |
-| --------------- | ---------------- | --------- |
-| 单节点 QPS      | 1000+            | ✅        |
-| 平均延迟        | < 200ms (P50)    | ✅        |
-| P95 延迟        | < 500ms          | ✅        |
-| 可用性          | 99.9%            | ✅ (本地) |
-| Redis 命中率    | > 95%            | 配置依赖  |
-| 数据库连接池    | 20 (共享)        | ✅        |
-
-***
-
-## 🔒 安全特性
-
-### 认证与授权
-
-- ✅ **OAuth2 + JWT**：RS256 非对称签名，公钥可分发给下游服务独立验证
-- ✅ **多因素认证**：预留 OTP/WebAuthn 支持
-- ✅ **Token 黑名单**：Redis 存储已登出 Token
-- ✅ **HTTPS Only**：生产环境强制 HTTPS
-- ✅ **密码安全**：BCrypt 加密（strength=12）
-
-### 数据隐私
-
-- ✅ **Schema 隔离**：租户数据物理分离
-- ✅ **SQL 参数化**：防止注入攻击
-- ✅ **敏感字段加密**：如 OAuth2 access_token
-- ✅ **审计日志**：完整记录关键操作
-
-### 合规性
-
-- ✅ **GDPR 支持**：用户数据导出、删除功能
-- ✅ **CCPA 支持**：加州隐私数据处理
-- ✅ **PCI DSS**：支付数据安全（与 Stripe 集成）
-
-***
-
-## 📚 文档
-
-- [架构决策文档](./docs/adr) - 详细的技术决策和设计权衡
-- [实现步骤](./docs/implementation.md) - 四阶段详细实现指南
-- [待办清单](./docs/todo.md) - 项目进度和 checklist
-- [PRD 文档](./docs/prd.md) - 完整产品需求文档
-- [多租户调研](./docs/multitenant-research.md) - SaaS 多租户技术调研
+详见 [docs/api](./docs) 目录。
 
 ***
 
@@ -712,59 +417,12 @@ bash scripts/smoke-test.sh
 - 遵循 [Google Java Style Guide](https://google.github.io/styleguide/javaguide.html)
 - 所有方法返回 `Mono<T>` 或 `Flux<T>`（禁止阻塞调用）
 - 使用构造函数注入（Spring 推荐）
-- 100% 单元测试覆盖率（核心业务逻辑）
 
 ***
 
 ## 📝 许可证
 
 本项目采用 Apache License 2.0 开源许可证。详见 [LICENSE](./LICENSE) 文件。
-
-***
-
-## 💬 常见问题
-
-**Q: 为什么选择 WebFlux？**
-
-A: WebFlux 采用响应式编程模型，相比传统 Spring MVC：
-
-- **高并发**：少量线程处理大量并发连接
-- **低延迟**：异步非阻塞 I/O
-- **内存效率**：更低的内存占用，适合容器化部署
-
-**Q: Schema-per-Tenant 如何处理跨租户查询？**
-
-A: Schema-per-Tenant 主要用于数据隔离，大多数查询均为单租户。对于统计分析等跨租户需求，可：
-
-1. 使用 Elasticsearch 等搜索引擎（已索引多租户数据）
-2. 创建数据仓库（定时从各 Schema 聚合数据）
-3. 使用 Postgres 的 postgres_fdw 外表查询
-
-**Q: 如何添加新的微服务？**
-
-A: 参考以下步骤：
-
-1. 在 pom.xml 中添加模块
-2. 复制 order-service 的结构，修改包名和业务逻辑
-3. 在 docker-compose.yml 中添加服务（如需）
-4. 在 API Gateway 的 application.yml 中添加路由规则
-
-**Q: 生产环境如何部署？**
-
-A: 参考 Kubernetes 部署指南（规划中）：
-
-- 使用 Helm Chart 部署
-- AWS RDS 替代本地 PostgreSQL
-- AWS ElastiCache 替代本地 Redis
-- 多可用区高可用架构
-
-***
-
-## 📞 联系方式
-
-- **GitHub Issues**: [项目 Issue 列表](https://github.com/sukimiya/open-iemodo/issues)
-- **讨论**: [GitHub Discussions](https://github.com/sukimiya/open-iemodo/discussions)
-- **邮件**: [项目维护者](mailto:your-email@example.com)
 
 ***
 

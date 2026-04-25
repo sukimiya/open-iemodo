@@ -21,7 +21,6 @@ import org.springframework.data.r2dbc.core.R2dbcEntityTemplate;
 import org.springframework.data.r2dbc.dialect.PostgresDialect;
 import org.springframework.data.r2dbc.mapping.R2dbcMappingContext;
 import org.springframework.data.relational.RelationalManagedTypes;
-import org.springframework.data.relational.core.mapping.NamingStrategy;
 import org.springframework.r2dbc.connection.lookup.AbstractRoutingConnectionFactory;
 import org.springframework.r2dbc.core.DatabaseClient;
 
@@ -76,10 +75,14 @@ public class MultitenantR2dbcConfiguration {
 
         PostgresTenantConnectionFactory routingFactory = new PostgresTenantConnectionFactory();
         routingFactory.setTargetConnectionFactories(factories);
+        routingFactory.setSystemTenantId(tenantProperties.getSystemTenantId());
         routingFactory.afterPropertiesSet();
 
         log.info("Multi-tenant ConnectionFactory initialised with {} tenant(s): {}",
                 factories.size(), factories.keySet());
+        if (tenantProperties.getSystemTenantId() != null) {
+            log.info("System tenant fallback configured: {}", tenantProperties.getSystemTenantId());
+        }
         return routingFactory;
     }
 
@@ -105,7 +108,7 @@ public class MultitenantR2dbcConfiguration {
     @Bean
     @Primary
     public R2dbcMappingContext r2dbcMappingContext() throws Exception {
-        R2dbcMappingContext context = new R2dbcMappingContext(NamingStrategy.INSTANCE);
+        R2dbcMappingContext context = new R2dbcMappingContext();
         context.setManagedTypes(RelationalManagedTypes.empty());
         return context;
     }

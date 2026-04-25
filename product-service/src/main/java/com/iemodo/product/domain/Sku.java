@@ -62,7 +62,7 @@ public class Sku extends BaseEntity {
     // ─── Domain helpers ────────────────────────────────────────────────────
 
     public boolean isActive() {
-        return "ACTIVE".equals(skuStatus) && getIsValid() == 1;
+        return "ACTIVE".equals(skuStatus) && Boolean.TRUE.equals(getIsValid());
     }
 
     public boolean isOutOfStock() {

@@ -13,7 +13,7 @@ CREATE TABLE IF NOT EXISTS order_delay_task (
     create_time  TIMESTAMPTZ,
     update_by    BIGINT,
     update_time  TIMESTAMPTZ,
-    is_valid     INTEGER       NOT NULL DEFAULT 1
+    is_valid         BOOLEAN         NOT NULL DEFAULT true
 );
 
 CREATE INDEX IF NOT EXISTS idx_delay_task_execute_status ON order_delay_task (execute_time, task_status);

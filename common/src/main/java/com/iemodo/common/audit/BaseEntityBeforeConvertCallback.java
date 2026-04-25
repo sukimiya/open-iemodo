@@ -14,7 +14,7 @@ import reactor.core.publisher.Mono;
  * BeforeConvertCallback 实现，用于在实体转换为数据库行之前：
  * <ul>
  *   <li>生成雪花算法ID（如果为空）</li>
- *   <li>设置默认值（status=1, isValid=1）</li>
+ *   <li>设置默认值（status=1, isValid=true）</li>
  *   <li>标记是否为新增记录</li>
  * </ul>
  */
@@ -44,7 +44,7 @@ public class BaseEntityBeforeConvertCallback implements BeforeConvertCallback<Ba
             entity.setStatus(1); // 默认启用
         }
         if (entity.getIsValid() == null) {
-            entity.setIsValid(1); // 默认有效
+            entity.setIsValid(true); // 默认有效
         }
 
         return Mono.just(entity);

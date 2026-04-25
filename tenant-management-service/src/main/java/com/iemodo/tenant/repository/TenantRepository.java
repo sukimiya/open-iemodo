@@ -23,7 +23,7 @@ public interface TenantRepository extends ReactiveCrudRepository<Tenant, Long> {
 
     Flux<Tenant> findAllByTenantStatus(String tenantStatus);
 
-    @Query("SELECT * FROM tenants WHERE tenant_status = 'ACTIVE' AND is_valid = 1")
+    @Query("SELECT * FROM tenants WHERE tenant_status = 'ACTIVE' AND is_valid = true")
     Flux<Tenant> findAllActive();
 
     @Query("SELECT * FROM tenants WHERE tenant_status != 'DELETED' ORDER BY create_time DESC LIMIT :limit OFFSET :offset")

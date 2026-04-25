@@ -21,7 +21,7 @@ CREATE TABLE IF NOT EXISTS gateway_routes (
     create_time     TIMESTAMPTZ,
     update_by       BIGINT,
     update_time     TIMESTAMPTZ,
-    is_valid        INTEGER         NOT NULL DEFAULT 1
+    is_valid         BOOLEAN         NOT NULL DEFAULT true
 );
 
 CREATE INDEX IF NOT EXISTS idx_gateway_routes_enabled ON gateway_routes (enabled);
@@ -47,7 +47,7 @@ CREATE TABLE IF NOT EXISTS rate_limit_rules (
     create_time         TIMESTAMPTZ,
     update_by           BIGINT,
     update_time         TIMESTAMPTZ,
-    is_valid            INTEGER         NOT NULL DEFAULT 1
+    is_valid         BOOLEAN         NOT NULL DEFAULT true
 );
 
 CREATE INDEX IF NOT EXISTS idx_rate_limit_rules_route ON rate_limit_rules (route_id);
@@ -71,7 +71,7 @@ CREATE TABLE IF NOT EXISTS jwt_public_keys (
     create_time     TIMESTAMPTZ,
     update_by       BIGINT,
     update_time     TIMESTAMPTZ,
-    is_valid        INTEGER         NOT NULL DEFAULT 1
+    is_valid         BOOLEAN         NOT NULL DEFAULT true
 );
 
 CREATE INDEX IF NOT EXISTS idx_jwt_public_keys_active ON jwt_public_keys (active);
@@ -103,7 +103,7 @@ CREATE TABLE IF NOT EXISTS gateway_access_logs (
     create_time     TIMESTAMPTZ     NOT NULL DEFAULT NOW(),
     update_by       BIGINT,
     update_time     TIMESTAMPTZ,
-    is_valid        INTEGER         NOT NULL DEFAULT 1,
+    is_valid         BOOLEAN         NOT NULL DEFAULT true,
     
     PRIMARY KEY (id, create_time)
 ) PARTITION BY RANGE (create_time);

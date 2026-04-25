@@ -15,26 +15,30 @@ public interface RefundRepository extends ReactiveCrudRepository<Refund, Long> {
 
     Mono<Refund> findByRefundNo(String refundNo);
 
+    @Query("SELECT * FROM refunds WHERE refund_no = :refundNo AND is_valid = true")
     Mono<Refund> findByRefundNoAndIsValid(String refundNo);
 
+    @Query("SELECT * FROM refunds WHERE id = :id AND is_valid = true")
     Mono<Refund> findByIdAndIsValid(Long id);
 
+    @Query("SELECT * FROM refunds WHERE payment_id = :paymentId AND is_valid = true ORDER BY create_time DESC")
     Flux<Refund> findByPaymentIdAndIsValidOrderByCreateTimeDesc(Long paymentId);
 
+    @Query("SELECT * FROM refunds WHERE order_id = :orderId AND is_valid = true ORDER BY create_time DESC")
     Flux<Refund> findByOrderIdAndIsValidOrderByCreateTimeDesc(Long orderId);
 
-    @Query("SELECT * FROM refunds WHERE tenant_id = :tenantId AND is_valid = 1 ORDER BY create_time DESC LIMIT :limit OFFSET :offset")
+    @Query("SELECT * FROM refunds WHERE tenant_id = :tenantId AND is_valid = true ORDER BY create_time DESC LIMIT :limit OFFSET :offset")
     Flux<Refund> findByTenantId(String tenantId, int limit, int offset);
 
-    @Query("SELECT COUNT(*) FROM refunds WHERE tenant_id = :tenantId AND is_valid = 1")
+    @Query("SELECT COUNT(*) FROM refunds WHERE tenant_id = :tenantId AND is_valid = true")
     Mono<Long> countByTenantId(String tenantId);
 
     Mono<Boolean> existsByRefundNo(String refundNo);
 
-    @Query("SELECT * FROM refunds WHERE third_party_refund_id = :refundId AND is_valid = 1")
+    @Query("SELECT * FROM refunds WHERE third_party_refund_id = :refundId AND is_valid = true")
     Mono<Refund> findByThirdPartyRefundId(String refundId);
 
-    @Query("SELECT COALESCE(SUM(amount), 0) FROM refunds WHERE payment_id = :paymentId AND status = 'SUCCESS' AND is_valid = 1")
+    @Query("SELECT COALESCE(SUM(amount), 0) FROM refunds WHERE payment_id = :paymentId AND status = 'SUCCESS' AND is_valid = true")
     Mono<java.math.BigDecimal> sumSuccessfulRefundsByPaymentId(Long paymentId);
 
     @Query("UPDATE refunds SET status = :status, third_party_refund_id = :thirdPartyId, processed_at = NOW(), update_time = NOW() WHERE id = :id")

@@ -34,7 +34,7 @@ CREATE TABLE IF NOT EXISTS warehouse_evaluations (
     create_time TIMESTAMP,
     update_by BIGINT,
     update_time TIMESTAMP,
-    is_valid INTEGER NOT NULL DEFAULT 1,
+    is_valid         BOOLEAN         NOT NULL DEFAULT true,
     
     CONSTRAINT unique_warehouse_evaluation UNIQUE (warehouse_id, destination_country, destination_postal_code)
 );
@@ -82,7 +82,7 @@ CREATE TABLE IF NOT EXISTS stock_transfer_recommendations (
     create_time TIMESTAMP,
     update_by BIGINT,
     update_time TIMESTAMP,
-    is_valid INTEGER NOT NULL DEFAULT 1
+    is_valid         BOOLEAN         NOT NULL DEFAULT true
 );
 
 CREATE INDEX idx_transfer_recommendations_status ON stock_transfer_recommendations(recommendation_status);
@@ -122,7 +122,7 @@ CREATE TABLE IF NOT EXISTS delivery_time_estimates (
     create_time TIMESTAMP,
     update_by BIGINT,
     update_time TIMESTAMP,
-    is_valid INTEGER NOT NULL DEFAULT 1,
+    is_valid         BOOLEAN         NOT NULL DEFAULT true,
     
     CONSTRAINT unique_delivery_estimate UNIQUE (warehouse_id, destination_country, destination_postal_code, shipping_method)
 );
@@ -156,7 +156,7 @@ CREATE TABLE IF NOT EXISTS customs_clearance_rules (
     create_time TIMESTAMP,
     update_by BIGINT,
     update_time TIMESTAMP,
-    is_valid INTEGER NOT NULL DEFAULT 1
+    is_valid         BOOLEAN         NOT NULL DEFAULT true
 );
 
 -- Insert default customs rules

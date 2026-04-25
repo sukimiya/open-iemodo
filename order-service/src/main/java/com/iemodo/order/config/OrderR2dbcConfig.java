@@ -11,7 +11,6 @@ import org.springframework.scheduling.annotation.EnableScheduling;
  */
 @Configuration
 @Import(MultitenantR2dbcConfiguration.class)
-@EnableR2dbcRepositories(basePackages = "com.iemodo.order.repository")
 @EnableScheduling
 public class OrderR2dbcConfig {
 }

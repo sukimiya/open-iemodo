@@ -17,25 +17,27 @@ public interface CouponRepository extends ReactiveCrudRepository<Coupon, Long> {
 
     Mono<Coupon> findByCouponCodeAndTenantId(String couponCode, String tenantId);
 
+    @Query("SELECT * FROM coupons WHERE coupon_code = :couponCode AND tenant_id = :tenantId AND is_valid = true")
     Mono<Coupon> findByCouponCodeAndTenantIdAndIsValid(String couponCode, String tenantId);
 
+    @Query("SELECT * FROM coupons WHERE tenant_id = :tenantId AND is_valid = true")
     Flux<Coupon> findByTenantIdAndIsValid(String tenantId);
 
     @Query("SELECT * FROM coupons WHERE tenant_id = :tenantId " +
-           "AND is_active = true AND is_valid = 1 " +
+           "AND coupon_active = true AND is_valid = true " +
            "AND valid_from <= :now AND valid_to >= :now " +
            "ORDER BY create_time DESC")
     Flux<Coupon> findActiveCoupons(String tenantId, Instant now);
 
     @Query("SELECT * FROM coupons WHERE tenant_id = :tenantId " +
-           "AND type = :type AND is_active = true AND is_valid = 1 " +
+           "AND coupon_type = :type AND coupon_active = true AND is_valid = true " +
            "ORDER BY create_time DESC")
     Flux<Coupon> findByType(String tenantId, String type);
 
     /**
      * Find draft coupons whose valid_from has arrived and should be auto-published
      */
-    @Query("SELECT * FROM coupons WHERE is_active = false AND is_valid = 1 " +
+    @Query("SELECT * FROM coupons WHERE coupon_active = false AND is_valid = true " +
            "AND valid_from <= :now AND valid_to > :now")
     Flux<Coupon> findScheduledToActivate(Instant now);
 }

@@ -21,7 +21,7 @@ CREATE TABLE IF NOT EXISTS tenants (
     create_time     TIMESTAMPTZ,
     update_by       BIGINT,
     update_time     TIMESTAMPTZ,
-    is_valid        INTEGER         NOT NULL DEFAULT 1,
+    is_valid         BOOLEAN         NOT NULL DEFAULT true,
 
     CONSTRAINT tenants_status_check CHECK (tenant_status IN ('ACTIVE', 'SUSPENDED', 'DELETED'))
 );
@@ -43,7 +43,7 @@ CREATE TABLE IF NOT EXISTS tenant_schemas (
     create_time     TIMESTAMPTZ,
     update_by       BIGINT,
     update_time     TIMESTAMPTZ,
-    is_valid        INTEGER         NOT NULL DEFAULT 1,
+    is_valid         BOOLEAN         NOT NULL DEFAULT true,
 
     CONSTRAINT tenant_schemas_unique UNIQUE (tenant_id, service_name)
 );
@@ -67,7 +67,7 @@ CREATE TABLE IF NOT EXISTS tenant_configs (
     create_time     TIMESTAMPTZ,
     update_by       BIGINT,
     update_time     TIMESTAMPTZ,
-    is_valid        INTEGER         NOT NULL DEFAULT 1,
+    is_valid         BOOLEAN         NOT NULL DEFAULT true,
 
     CONSTRAINT tenant_configs_unique UNIQUE (tenant_id, config_key),
     CONSTRAINT tenant_configs_type_check CHECK (config_type IN ('STRING', 'INTEGER', 'DECIMAL', 'BOOLEAN', 'JSON'))

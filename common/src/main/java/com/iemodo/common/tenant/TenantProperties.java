@@ -26,6 +26,9 @@ import java.util.List;
 @ConfigurationProperties(prefix = "iemodo")
 public class TenantProperties {
 
+    /** Default tenant ID used by system tasks (schedulers, etc.) when no HTTP context is available. */
+    private String systemTenantId;
+
     private List<TenantDataSourceConfig> tenants = new ArrayList<>();
 
     @Data

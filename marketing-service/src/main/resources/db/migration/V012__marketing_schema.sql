@@ -40,7 +40,7 @@ CREATE TABLE IF NOT EXISTS coupons (
     create_time TIMESTAMP,
     update_by BIGINT,
     update_time TIMESTAMP,
-    is_valid INTEGER NOT NULL DEFAULT 1
+    is_valid         BOOLEAN         NOT NULL DEFAULT true
 );
 
 CREATE INDEX idx_coupons_code ON coupons(coupon_code);
@@ -77,7 +77,7 @@ CREATE TABLE IF NOT EXISTS user_coupons (
     create_time TIMESTAMP,
     update_by BIGINT,
     update_time TIMESTAMP,
-    is_valid INTEGER NOT NULL DEFAULT 1,
+    is_valid         BOOLEAN         NOT NULL DEFAULT true,
     
     CONSTRAINT unique_user_coupon UNIQUE (customer_id, coupon_id)
 );

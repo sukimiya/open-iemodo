@@ -12,6 +12,5 @@ import org.springframework.data.r2dbc.repository.config.EnableR2dbcRepositories;
  */
 @Configuration
 @Import(MultitenantR2dbcConfiguration.class)
-@EnableR2dbcRepositories(basePackages = "com.iemodo.user.repository")
 public class UserR2dbcConfig {
 }

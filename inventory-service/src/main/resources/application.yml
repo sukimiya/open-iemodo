@@ -5,22 +5,6 @@ spring:
   application:
     name: inventory-service
 
-  config:
-    import: "nacos:inventory-service.yaml?group=IEMODO&refreshEnabled=true"
-
-  cloud:
-    nacos:
-      server-addr: ${NACOS_SERVER_ADDR:localhost:8848}
-      discovery:
-        enabled: true
-        namespace: public
-        group: IEMODO
-      config:
-        enabled: true
-        namespace: public
-        group: IEMODO
-        file-extension: yaml
-
   # R2DBC for reactive database access
   r2dbc:
     url: r2dbc:postgresql://localhost:5433/iemodo

@@ -5,22 +5,6 @@ spring:
   application:
     name: pricing-service
 
-  config:
-    import: "nacos:pricing-service.yaml?group=IEMODO&refreshEnabled=true"
-
-  cloud:
-    nacos:
-      server-addr: ${NACOS_SERVER_ADDR:localhost:8848}
-      discovery:
-        enabled: true
-        namespace: public
-        group: IEMODO
-      config:
-        enabled: true
-        namespace: public
-        group: IEMODO
-        file-extension: yaml
-
   r2dbc:
     url: r2dbc:postgresql://${DB_HOST:localhost}:${DB_PORT:5432}/${DB_NAME:iemodo}
     username: ${DB_USER:iemodo}

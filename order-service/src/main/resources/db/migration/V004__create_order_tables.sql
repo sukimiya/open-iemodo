@@ -21,7 +21,7 @@ CREATE TABLE IF NOT EXISTS orders (
     create_time     TIMESTAMPTZ,
     update_by       BIGINT,
     update_time     TIMESTAMPTZ,
-    is_valid        INTEGER         NOT NULL DEFAULT 1,
+    is_valid         BOOLEAN         NOT NULL DEFAULT true,
 
     CONSTRAINT orders_order_no_unique UNIQUE (order_no)
 );
@@ -47,7 +47,7 @@ CREATE TABLE IF NOT EXISTS order_items (
     create_time TIMESTAMPTZ,
     update_by   BIGINT,
     update_time TIMESTAMPTZ,
-    is_valid    INTEGER         NOT NULL DEFAULT 1
+    is_valid         BOOLEAN         NOT NULL DEFAULT true
 );
 
 CREATE INDEX IF NOT EXISTS idx_order_items_order_id ON order_items (order_id);

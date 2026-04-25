@@ -21,7 +21,7 @@ CREATE TABLE IF NOT EXISTS brands (
     create_time     TIMESTAMPTZ,
     update_by       BIGINT,
     update_time     TIMESTAMPTZ,
-    is_valid        INTEGER         NOT NULL DEFAULT 1
+    is_valid         BOOLEAN         NOT NULL DEFAULT true
 );
 
 CREATE INDEX IF NOT EXISTS idx_brands_active ON brands (is_active);
@@ -47,7 +47,7 @@ CREATE TABLE IF NOT EXISTS categories (
     create_time     TIMESTAMPTZ,
     update_by       BIGINT,
     update_time     TIMESTAMPTZ,
-    is_valid        INTEGER         NOT NULL DEFAULT 1
+    is_valid         BOOLEAN         NOT NULL DEFAULT true
 );
 
 CREATE INDEX IF NOT EXISTS idx_categories_parent ON categories (parent_id);
@@ -109,7 +109,7 @@ CREATE TABLE IF NOT EXISTS products (
     create_time         TIMESTAMPTZ,
     update_by           BIGINT,
     update_time         TIMESTAMPTZ,
-    is_valid            INTEGER         NOT NULL DEFAULT 1
+    is_valid         BOOLEAN         NOT NULL DEFAULT true
 );
 
 CREATE INDEX IF NOT EXISTS idx_products_status ON products (product_status);
@@ -117,7 +117,7 @@ CREATE INDEX IF NOT EXISTS idx_products_category ON products (category_id);
 CREATE INDEX IF NOT EXISTS idx_products_brand ON products (brand_id);
 CREATE INDEX IF NOT EXISTS idx_products_featured ON products (is_featured) WHERE is_featured = TRUE;
 CREATE INDEX IF NOT EXISTS idx_products_new ON products (is_new_arrival) WHERE is_new_arrival = TRUE;
-CREATE INDEX IF NOT EXISTS idx_products_valid ON products (is_valid) WHERE is_valid = 1;
+CREATE INDEX IF NOT EXISTS idx_products_valid ON products (is_valid) WHERE is_valid;
 CREATE INDEX IF NOT EXISTS idx_products_search ON products USING GIN(search_vector);
 
 -- ─── skus ────────────────────────────────────────────────────────────────────
@@ -155,13 +155,13 @@ CREATE TABLE IF NOT EXISTS skus (
     create_time         TIMESTAMPTZ,
     update_by           BIGINT,
     update_time         TIMESTAMPTZ,
-    is_valid            INTEGER         NOT NULL DEFAULT 1
+    is_valid         BOOLEAN         NOT NULL DEFAULT true
 );
 
 CREATE INDEX IF NOT EXISTS idx_skus_product ON skus (product_id);
 CREATE INDEX IF NOT EXISTS idx_skus_status ON skus (sku_status);
 CREATE INDEX IF NOT EXISTS idx_skus_hash ON skus (attribute_hash);
-CREATE INDEX IF NOT EXISTS idx_skus_valid ON skus (is_valid) WHERE is_valid = 1;
+CREATE INDEX IF NOT EXISTS idx_skus_valid ON skus (is_valid) WHERE is_valid;
 
 -- ─── product_media ───────────────────────────────────────────────────────────
 CREATE TABLE IF NOT EXISTS product_media (
@@ -180,7 +180,7 @@ CREATE TABLE IF NOT EXISTS product_media (
     create_time     TIMESTAMPTZ,
     update_by       BIGINT,
     update_time     TIMESTAMPTZ,
-    is_valid        INTEGER         NOT NULL DEFAULT 1
+    is_valid         BOOLEAN         NOT NULL DEFAULT true
 );
 
 CREATE INDEX IF NOT EXISTS idx_media_product ON product_media (product_id);
@@ -203,7 +203,7 @@ CREATE TABLE IF NOT EXISTS product_regional_prices (
     create_time     TIMESTAMPTZ,
     update_by       BIGINT,
     update_time     TIMESTAMPTZ,
-    is_valid        INTEGER         NOT NULL DEFAULT 1,
+    is_valid         BOOLEAN         NOT NULL DEFAULT true,
     
     UNIQUE(product_id, sku_id, country_code)
 );
@@ -228,7 +228,7 @@ CREATE TABLE IF NOT EXISTS product_country_visibility (
     create_time         TIMESTAMPTZ,
     update_by           BIGINT,
     update_time         TIMESTAMPTZ,
-    is_valid            INTEGER         NOT NULL DEFAULT 1,
+    is_valid         BOOLEAN         NOT NULL DEFAULT true,
     
     UNIQUE(product_id, country_code)
 );

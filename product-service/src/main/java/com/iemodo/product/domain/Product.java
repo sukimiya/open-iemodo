@@ -79,7 +79,7 @@ public class Product extends BaseEntity {
     // ─── Domain helpers ────────────────────────────────────────────────────
 
     public boolean isActive() {
-        return "ACTIVE".equals(productStatus) && getIsValid() == 1;
+        return "ACTIVE".equals(productStatus) && Boolean.TRUE.equals(getIsValid());
     }
 
     public boolean isDraft() {
@@ -87,7 +87,7 @@ public class Product extends BaseEntity {
     }
 
     public boolean isArchived() {
-        return "ARCHIVED".equals(productStatus) || getIsValid() == 0;
+        return "ARCHIVED".equals(productStatus) || Boolean.FALSE.equals(getIsValid());
     }
 
     public boolean isFeatured() {
@@ -100,7 +100,7 @@ public class Product extends BaseEntity {
 
     public void softDelete() {
         this.productStatus = "ARCHIVED";
-        setIsValid(0);
+        setIsValid(false);
     }
 
     public void incrementViewCount() {

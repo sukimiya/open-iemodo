@@ -34,7 +34,7 @@ public class Coupon extends BaseEntity {
     @Column("description")
     private String description;
 
-    @Column("type")
+    @Column("coupon_type")
     private CouponType type;
 
     @Column("discount_value")
@@ -70,7 +70,7 @@ public class Coupon extends BaseEntity {
     @Column("valid_to")
     private Instant validTo;
 
-    @Column("is_active")
+    @Column("coupon_active")
     private Boolean isActive;
 
     @Column("tenant_id")

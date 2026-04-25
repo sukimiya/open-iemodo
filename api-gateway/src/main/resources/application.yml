@@ -5,22 +5,6 @@ spring:
   application:
     name: api-gateway
 
-  # ─── Nacos Config ────────────────────────────────────────────────────────
-  config:
-    import: "nacos:api-gateway.yaml?group=IEMODO&refreshEnabled=true"
-
-  cloud:
-    nacos:
-      server-addr: ${NACOS_SERVER_ADDR:localhost:8848}
-      discovery:
-        namespace: ${NACOS_NAMESPACE:}
-        group: IEMODO
-        register-enabled: true
-      config:
-        namespace: ${NACOS_NAMESPACE:}
-        group: IEMODO
-        file-extension: yaml
-
     # ─── Gateway Routes ────────────────────────────────────────────────────
     gateway:
       discovery:

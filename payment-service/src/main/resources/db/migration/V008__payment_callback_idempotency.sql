@@ -12,7 +12,7 @@ CREATE TABLE IF NOT EXISTS payment_callback_log (
     create_time       TIMESTAMPTZ   DEFAULT CURRENT_TIMESTAMP,
     update_by         BIGINT,
     update_time       TIMESTAMPTZ,
-    is_valid          INTEGER       NOT NULL DEFAULT 1,
+    is_valid         BOOLEAN         NOT NULL DEFAULT true,
 
     CONSTRAINT uq_callback_event_id UNIQUE (event_id)
 );

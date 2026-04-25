@@ -25,7 +25,7 @@ CREATE TABLE IF NOT EXISTS tax_rates (
     create_time TIMESTAMP,
     update_by BIGINT,
     update_time TIMESTAMP,
-    is_valid INTEGER NOT NULL DEFAULT 1,
+    is_valid         BOOLEAN         NOT NULL DEFAULT true,
     
     CONSTRAINT positive_rate CHECK (rate >= 0 AND rate <= 1)
 );
@@ -80,7 +80,7 @@ CREATE TABLE IF NOT EXISTS product_tax_categories (
     create_time TIMESTAMP,
     update_by BIGINT,
     update_time TIMESTAMP,
-    is_valid INTEGER NOT NULL DEFAULT 1
+    is_valid         BOOLEAN         NOT NULL DEFAULT true
 );
 
 INSERT INTO product_tax_categories (id, category_code, category_name, description, default_rate) VALUES
@@ -112,7 +112,7 @@ CREATE TABLE IF NOT EXISTS tax_exemptions (
     create_time TIMESTAMP,
     update_by BIGINT,
     update_time TIMESTAMP,
-    is_valid INTEGER NOT NULL DEFAULT 1
+    is_valid         BOOLEAN         NOT NULL DEFAULT true
 );
 
 CREATE INDEX idx_tax_exemptions_customer ON tax_exemptions(customer_id);
@@ -158,7 +158,7 @@ CREATE TABLE IF NOT EXISTS tax_transactions (
     create_time TIMESTAMP,
     update_by BIGINT,
     update_time TIMESTAMP,
-    is_valid INTEGER NOT NULL DEFAULT 1
+    is_valid         BOOLEAN         NOT NULL DEFAULT true
 );
 
 CREATE INDEX idx_tax_transactions_order ON tax_transactions(order_id);
@@ -183,7 +183,7 @@ CREATE TABLE IF NOT EXISTS tax_calculation_logs (
     create_time TIMESTAMP,
     update_by BIGINT,
     update_time TIMESTAMP,
-    is_valid INTEGER NOT NULL DEFAULT 1
+    is_valid         BOOLEAN         NOT NULL DEFAULT true
 );
 
 CREATE INDEX idx_tax_logs_request ON tax_calculation_logs(calculation_request_id);

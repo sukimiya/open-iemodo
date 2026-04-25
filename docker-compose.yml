@@ -1,6 +1,6 @@
 services:
   # ─────────────────────────────────────────────
-  # PostgreSQL 15 (arm64-native image)
+  # PostgreSQL 15
   # ─────────────────────────────────────────────
   postgres:
     image: postgres:15
@@ -12,7 +12,7 @@ services:
       POSTGRES_USER: iemodo
       POSTGRES_PASSWORD: iemodo123
     ports:
-      - "5433:5432"    # 5432 occupied by local PostgreSQL on macOS
+      - "5433:5432"
     volumes:
       - postgres_data:/var/lib/postgresql/data
       - ./scripts/init-db.sql:/docker-entrypoint-initdb.d/init-db.sql
@@ -41,33 +41,6 @@ services:
       timeout: 5s
       retries: 5
 
-  # ─────────────────────────────────────────────
-  # Nacos 2.3 (standalone mode)
-  # ─────────────────────────────────────────────
-  nacos:
-    image: nacos/nacos-server:v2.3.0
-    platform: linux/amd64
-    container_name: iemodo-nacos
-    restart: unless-stopped
-    environment:
-      MODE: standalone
-      PREFER_HOST_MODE: hostname
-      NACOS_AUTH_ENABLE: "false"
-      JVM_XMS: 256m
-      JVM_XMX: 512m
-    ports:
-      - "8848:8848"   # HTTP
-      - "9848:9848"   # gRPC
-    volumes:
-      - nacos_data:/home/nacos/data
-    healthcheck:
-      test: ["CMD", "curl", "-f", "http://localhost:8848/nacos/actuator/health"]
-      interval: 15s
-      timeout: 10s
-      retries: 10
-      start_period: 30s
-
 volumes:
   postgres_data:
   redis_data:
-  nacos_data:

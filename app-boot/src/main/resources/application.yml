@@ -1,0 +1,157 @@
+server:
+  port: 8080
+
+spring:
+  application:
+    name: iemodo-lite
+
+  # ─── R2DBC (single shared connection pool) ─────────────────────────────
+  r2dbc:
+    url: r2dbc:postgresql://${DB_HOST:localhost}:${DB_PORT:5433}/${DB_NAME:iemodo}
+    username: ${DB_USERNAME:iemodo}
+    password: ${DB_PASSWORD:iemodo123}
+    pool:
+      max-size: 20
+      initial-size: 5
+
+  # ─── Redis (JWT blacklist + cache + rate limiter) ──────────────────────
+  data:
+    redis:
+      host: ${REDIS_HOST:localhost}
+      port: ${REDIS_PORT:6379}
+      password: ${REDIS_PASSWORD:redis123}
+      lettuce:
+        pool:
+          max-active: 16
+          max-idle: 8
+          min-idle: 2
+
+  # ─── Flyway (all service migrations on the classpath) ──────────────────
+  flyway:
+    enabled: true
+    url: jdbc:postgresql://${DB_HOST:localhost}:${DB_PORT:5433}/${DB_NAME:iemodo}
+    user: ${DB_USERNAME:iemodo}
+    password: ${DB_PASSWORD:iemodo123}
+    schemas: schema_tenant_001,schema_tenant_002
+    locations: classpath:db/migration
+    baseline-on-migrate: true
+
+  # ─── Mail (SMTP for notifications) ──────────────────────────────────
+  mail:
+    host: ${SMTP_HOST:localhost}
+    port: ${SMTP_PORT:1025}
+    properties:
+      mail:
+        smtp:
+          auth: false
+          starttls:
+            enable: false
+
+  # ─── Security (OAuth2 login) ──────────────────────────────────────────
+  security:
+    oauth2:
+      client:
+        registration:
+          google:
+            client-id: ${GOOGLE_CLIENT_ID:your-google-client-id}
+            client-secret: ${GOOGLE_CLIENT_SECRET:your-google-client-secret}
+            scope: openid,profile,email
+            redirect-uri: "{baseUrl}/uc/api/v1/auth/oauth2/callback/google"
+
+# ─── Multi-tenant configuration ─────────────────────────────────────────
+iemodo:
+  system-tenant-id: tenant_001
+  tenants:
+    - id: tenant_001
+      type: SCHEMA
+      schema: schema_tenant_001
+      host: ${DB_HOST:localhost}
+      port: ${DB_PORT:5433}
+      database: ${DB_NAME:iemodo}
+      username: ${DB_USERNAME:iemodo}
+      password: ${DB_PASSWORD:iemodo123}
+    - id: tenant_002
+      type: SCHEMA
+      schema: schema_tenant_002
+      host: ${DB_HOST:localhost}
+      port: ${DB_PORT:5433}
+      database: ${DB_NAME:iemodo}
+      username: ${DB_USERNAME:iemodo}
+      password: ${DB_PASSWORD:iemodo123}
+
+  # ─── Gateway-less JWT validation config ───────────────────────────────
+  gateway:
+    jwt:
+      public-key-path: ${JWT_PUBLIC_KEY_PATH:classpath:jwt/public.pem}
+    whitelist:
+      - POST:/uc/api/v1/auth/register
+      - POST:/uc/api/v1/auth/login
+      - POST:/uc/api/v1/auth/refresh
+      - GET:/uc/api/v1/auth/oauth2/**
+      - GET:/oauth2/authorization/**
+      - GET:/login/oauth2/code/**
+      - GET:/actuator/**
+      - GET:/health
+      - GET:/swagger-ui/**
+      - GET:/v3/api-docs/**
+      - GET:/webjars/swagger-ui/**
+      - /swagger-ui.html
+
+  # ─── User service JWT config ──────────────────────────────────────────
+  user:
+    jwt:
+      private-key-path: classpath:jwt/private.pem
+      public-key-path: classpath:jwt/public.pem
+      access-token-ttl-minutes: 60
+      refresh-token-ttl-days: 30
+      issuer: iemodo-user-service
+
+  # ─── Payment (Stripe) ─────────────────────────────────────────────────
+  payment:
+    stripe:
+      public-key: ${STRIPE_PUBLIC_KEY:pk_test_placeholder}
+      secret-key: ${STRIPE_SECRET_KEY:sk_test_placeholder}
+      webhook-secret: ${STRIPE_WEBHOOK_SECRET:whsec_placeholder}
+
+# Stripe Configuration (used by @Value("${stripe.*}") in code)
+stripe:
+  public-key: ${STRIPE_PUBLIC_KEY:pk_test_placeholder}
+  secret-key: ${STRIPE_SECRET_KEY:sk_test_placeholder}
+  webhook-secret: ${STRIPE_WEBHOOK_SECRET:whsec_placeholder}
+
+  # ─── Pricing (exchange rate) ──────────────────────────────────────────
+  pricing:
+    exchange-rate:
+      api-key: ${FIXER_API_KEY:}
+
+  # ─── File storage (MinIO / S3) ────────────────────────────────────────
+  minio:
+    endpoint: http://localhost:9000
+    access-key: ${MINIO_ACCESS_KEY:minioadmin}
+    secret-key: ${MINIO_SECRET_KEY:minioadmin}
+    bucket: iemodo-files
+
+  # ─── Map services (optional API keys) ──────────────────────────────────
+  map:
+    google:
+      api-key: ${GOOGLE_MAPS_API_KEY:}
+    baidu:
+      api-key: ${BAIDU_MAPS_API_KEY:}
+
+# ─── Actuator ───────────────────────────────────────────────────────────
+management:
+  endpoints:
+    web:
+      exposure:
+        include: health,info,metrics
+  endpoint:
+    health:
+      show-details: always
+
+# ─── Logging ─────────────────────────────────────────────────────────────
+logging:
+  level:
+    com.iemodo: DEBUG
+    org.springframework: INFO
+    org.flywaydb: INFO
+    org.springframework.security: INFO

@@ -27,6 +27,6 @@ public interface CategoryRepository extends ReactiveCrudRepository<Category, Lon
     @Query("SELECT * FROM categories WHERE level = :level AND parent_id = :parentId AND is_active = true")
     Flux<Category> findChildren(Long parentId, Integer level);
 
-    @Query("SELECT COUNT(*) FROM products WHERE category_id = :categoryId AND product_status = 'ACTIVE' AND is_valid = 1")
+    @Query("SELECT COUNT(*) FROM products WHERE category_id = :categoryId AND product_status = 'ACTIVE' AND is_valid = true")
     Mono<Long> countProductsByCategoryId(Long categoryId);
 }

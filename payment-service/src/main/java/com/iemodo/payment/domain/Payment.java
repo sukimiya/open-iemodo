@@ -197,7 +197,7 @@ public class Payment extends BaseEntity {
      * Soft delete
      */
     public void softDelete() {
-        setIsValid(0);
+        setIsValid(false);
     }
 
     /**
