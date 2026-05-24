@@ -23,6 +23,8 @@ public class CustomerDTO {
     private String preferredCurrency;
     private String preferredLanguage;
     private String preferredCountry;
+    private Integer status;
+    private String lastLoginIp;
     private Instant createdAt;
     private Instant updatedAt;
 }

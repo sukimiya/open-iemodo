@@ -40,6 +40,34 @@ public interface ProductRepository extends ReactiveCrudRepository<Product, Long>
            "ORDER BY sale_count DESC LIMIT :limit OFFSET :offset")
     Flux<Product> searchByKeyword(String keyword, int limit, int offset);
 
+    // ─── Filtered search with optional params ──────────────────────────────
+
+    String SEARCH_BASE = "SELECT * FROM products WHERE product_status = 'ACTIVE' AND is_valid = true " +
+           "AND (title ILIKE :keyword OR search_keywords ILIKE :keyword) " +
+           "AND (:minPrice IS NULL OR base_price >= :minPrice) " +
+           "AND (:maxPrice IS NULL OR base_price <= :maxPrice) " +
+           "AND (:brandId IS NULL OR brand_id = :brandId) ";
+
+    @Query(SEARCH_BASE + "ORDER BY sale_count DESC LIMIT :limit OFFSET :offset")
+    Flux<Product> searchFilteredSortSaleCount(String keyword, java.math.BigDecimal minPrice,
+                                               java.math.BigDecimal maxPrice, Long brandId,
+                                               int limit, int offset);
+
+    @Query(SEARCH_BASE + "ORDER BY base_price ASC LIMIT :limit OFFSET :offset")
+    Flux<Product> searchFilteredSortPriceAsc(String keyword, java.math.BigDecimal minPrice,
+                                              java.math.BigDecimal maxPrice, Long brandId,
+                                              int limit, int offset);
+
+    @Query(SEARCH_BASE + "ORDER BY base_price DESC LIMIT :limit OFFSET :offset")
+    Flux<Product> searchFilteredSortPriceDesc(String keyword, java.math.BigDecimal minPrice,
+                                               java.math.BigDecimal maxPrice, Long brandId,
+                                               int limit, int offset);
+
+    @Query(SEARCH_BASE + "ORDER BY create_time DESC LIMIT :limit OFFSET :offset")
+    Flux<Product> searchFilteredSortNewest(String keyword, java.math.BigDecimal minPrice,
+                                            java.math.BigDecimal maxPrice, Long brandId,
+                                            int limit, int offset);
+
     @Query("SELECT COUNT(*) FROM products WHERE product_status = 'ACTIVE' AND is_valid = true " +
            "AND (title ILIKE :keyword OR search_keywords ILIKE :keyword)")
     Mono<Long> countByKeyword(String keyword);

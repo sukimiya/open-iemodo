@@ -51,15 +51,20 @@ public class ProductController {
     }
 
     /**
-     * Search products.
+     * Search products with optional filters and sorting.
      */
     @GetMapping("/search")
     public Flux<Response<Product>> searchProducts(
             @RequestParam("q") String keyword,
             @RequestParam(value = "country", defaultValue = "US") String countryCode,
+            @RequestParam(value = "minPrice", required = false) java.math.BigDecimal minPrice,
+            @RequestParam(value = "maxPrice", required = false) java.math.BigDecimal maxPrice,
+            @RequestParam(value = "brandId", required = false) Long brandId,
+            @RequestParam(value = "sortBy", defaultValue = "sale_count") String sortBy,
             @RequestParam(value = "limit", defaultValue = "20") int limit,
             @RequestParam(value = "offset", defaultValue = "0") int offset) {
-        return productService.searchProducts(keyword, countryCode, limit, offset)
+        return productService.searchProducts(keyword, countryCode, minPrice, maxPrice,
+                        brandId, sortBy, limit, offset)
                 .map(Response::success);
     }
 

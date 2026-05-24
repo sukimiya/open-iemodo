@@ -92,4 +92,35 @@ public class CustomerController {
                 .collectList()
                 .map(orders -> Response.success(PageResponse.of(orders, orders.size(), page, size)));
     }
+
+    // ─── Admin ─────────────────────────────────────────────────────────────
+
+    @GetMapping
+    public Mono<Response<java.util.List<CustomerDTO>>> getAllCustomers(
+            @RequestParam(value = "tenantId", required = false) String tenantId) {
+        return customerService.getAllCustomers(tenantId)
+                .collectList()
+                .map(Response::success);
+    }
+
+    @GetMapping("/{customerId}")
+    public Mono<Response<CustomerDTO>> getCustomer(
+            @PathVariable Long customerId) {
+        return customerService.getById(customerId)
+                .map(Response::success);
+    }
+
+    @PostMapping("/{customerId}/suspend")
+    public Mono<Response<Void>> suspendCustomer(
+            @PathVariable Long customerId) {
+        return customerService.suspendCustomer(customerId)
+                .thenReturn(Response.success());
+    }
+
+    @PostMapping("/{customerId}/activate")
+    public Mono<Response<Void>> activateCustomer(
+            @PathVariable Long customerId) {
+        return customerService.activateCustomer(customerId)
+                .thenReturn(Response.success());
+    }
 }

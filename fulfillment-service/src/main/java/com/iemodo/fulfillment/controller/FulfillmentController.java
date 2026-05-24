@@ -63,6 +63,17 @@ public class FulfillmentController {
     }
 
     /**
+     * Get available shipping rates for checkout
+     */
+    @PostMapping("/shipping-rates")
+    public Mono<Response<ShippingRateResponse>> getShippingRates(
+            @Valid @RequestBody ShippingRateRequest request,
+            @RequestHeader(value = "X-TenantID", defaultValue = "tenant_001") String tenantId) {
+        return fulfillmentService.getShippingRates(request, tenantId)
+                .map(Response::success);
+    }
+
+    /**
      * Generate restock recommendations
      */
     @GetMapping("/restock/recommendations")

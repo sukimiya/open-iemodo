@@ -100,8 +100,19 @@ iemodo:
       - POST:/cc/api/v1/auth/refresh
       - GET:/cc/api/v1/auth/oauth2/**
       - POST:/cc/api/v1/auth/oauth2/**
+      # Password reset & email verification (unauthenticated)
+      - GET:/cc/api/v1/auth/verify-email
+      - POST:/cc/api/v1/auth/forgot-password
+      - POST:/cc/api/v1/auth/reset-password
       - GET:/actuator/**
       - GET:/health
+      # Cart endpoints (guest access — merge requires auth)
+      - GET:/cc/api/v1/cart
+      - GET:/cc/api/v1/cart/**
+      - POST:/cc/api/v1/cart/items
+      - PUT:/cc/api/v1/cart/items/**
+      - DELETE:/cc/api/v1/cart
+      - DELETE:/cc/api/v1/cart/items/**
       - GET:/swagger-ui/**
       - GET:/v3/api-docs/**
       - GET:/webjars/swagger-ui/**
@@ -154,6 +165,10 @@ stripe:
     access-key: ${MINIO_ACCESS_KEY:minioadmin}
     secret-key: ${MINIO_SECRET_KEY:minioadmin}
     bucket: iemodo
+
+  # ─── Storefront (frontend base URL for email links) ─────────────────────
+  storefront:
+    base-url: ${STOREFRONT_BASE_URL:http://localhost:3000}
 
   # ─── Map services (optional API keys) ──────────────────────────────────
   map:

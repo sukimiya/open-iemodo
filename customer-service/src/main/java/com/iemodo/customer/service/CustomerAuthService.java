@@ -8,27 +8,46 @@ import com.iemodo.customer.dto.CustomerDTO;
 import com.iemodo.customer.dto.TokenResponse;
 import com.iemodo.customer.repository.CustomerRefreshTokenRepository;
 import com.iemodo.customer.repository.CustomerRepository;
+import com.iemodo.notification.domain.NotificationChannel;
+import com.iemodo.notification.domain.NotificationType;
+import com.iemodo.notification.dto.SendNotificationRequest;
+import com.iemodo.notification.service.NotificationService;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.beans.factory.annotation.Value;
+import org.springframework.data.redis.core.ReactiveStringRedisTemplate;
 import org.springframework.http.HttpStatus;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import reactor.core.publisher.Mono;
 
+import java.time.Duration;
 import java.time.Instant;
 import java.time.temporal.ChronoUnit;
+import java.util.Map;
+import java.util.UUID;
 
 @Slf4j
 @Service
 @RequiredArgsConstructor
 public class CustomerAuthService {
 
+    private static final Duration VERIFY_TOKEN_TTL = Duration.ofHours(24);
+    private static final Duration RESET_TOKEN_TTL = Duration.ofHours(1);
+    private static final String VERIFY_PREFIX = "verify:email:";
+    private static final String RESET_PREFIX = "reset:password:";
+
     private final CustomerRepository customerRepository;
     private final CustomerRefreshTokenRepository refreshTokenRepository;
     private final CustomerJwtService jwtService;
     private final SmsOtpService smsOtpService;
     private final PasswordEncoder passwordEncoder;
+    private final NotificationService notificationService;
+    private final ReactiveStringRedisTemplate redisTemplate;
+
+    @Value("${iemodo.storefront.base-url:http://localhost:3000}")
+    private String storefrontBaseUrl;
 
     // ─── Phone OTP Login (auto-register if new) ───────────────────────────
 
@@ -73,11 +92,39 @@ public class CustomerAuthService {
                             .email(email)
                             .passwordHash(passwordEncoder.encode(password))
                             .displayName(displayName != null ? displayName : email.split("@")[0])
+                            .emailVerified(false)
                             .status(1)
                             .build();
                     return customerRepository.save(customer);
                 })
-                .flatMap(customer -> buildTokenResponse(customer, tenantId))
+                .flatMap(customer -> {
+                    String token = UUID.randomUUID().toString().replace("-", "");
+                    String verifyKey = VERIFY_PREFIX + tenantId + ":" + token;
+                    String verifyLink = storefrontBaseUrl + "/verify-email?token=" + token;
+
+                    SendNotificationRequest notifyReq = new SendNotificationRequest();
+                    notifyReq.setUserId(customer.getId());
+                    notifyReq.setTenantId(tenantId);
+                    notifyReq.setChannel(NotificationChannel.EMAIL);
+                    notifyReq.setType(NotificationType.USER_REGISTERED);
+                    notifyReq.setRecipient(email);
+                    notifyReq.setLanguage(customer.getPreferredLanguage() != null
+                            ? customer.getPreferredLanguage() : "en");
+                    notifyReq.setVariables(Map.of(
+                            "userName", customer.getDisplayName() != null
+                                    ? customer.getDisplayName() : email,
+                            "verifyLink", verifyLink
+                    ));
+
+                    return redisTemplate.opsForValue()
+                            .set(verifyKey, String.valueOf(customer.getId()), VERIFY_TOKEN_TTL)
+                            .then(notificationService.send(notifyReq)
+                                    .onErrorResume(ex -> {
+                                        log.warn("Welcome notification failed for {}: {}", email, ex.getMessage());
+                                        return Mono.empty();
+                                    }))
+                            .then(buildTokenResponse(customer, tenantId));
+                })
                 .doOnSuccess(r -> log.info("Email register success email={} tenant={}", email, tenantId))
                 .doOnError(e -> log.warn("Email register failed email={} tenant={}: {}", email, tenantId, e.getMessage()));
     }
@@ -162,6 +209,90 @@ public class CustomerAuthService {
                 .then(refreshTokenRepository.revokeAllByCustomerId(customerId))
                 .then()
                 .doOnSuccess(v -> log.info("Customer logout successful customerId={}", customerId));
+    }
+
+    // ─── Email Verification ───────────────────────────────────────────────
+
+    public Mono<Void> verifyEmail(String token, String tenantId) {
+        String verifyKey = VERIFY_PREFIX + tenantId + ":" + token;
+        return redisTemplate.opsForValue().get(verifyKey)
+                .switchIfEmpty(Mono.error(new BusinessException(
+                        ErrorCode.TOKEN_INVALID, HttpStatus.BAD_REQUEST, "Invalid or expired verification token")))
+                .flatMap(customerIdStr -> {
+                    Long customerId = Long.valueOf(customerIdStr);
+                    return redisTemplate.delete(verifyKey)
+                            .then(customerRepository.findById(customerId))
+                            .switchIfEmpty(Mono.error(new BusinessException(
+                                    ErrorCode.CUSTOMER_NOT_FOUND, HttpStatus.NOT_FOUND)))
+                            .flatMap(customer -> {
+                                customer.setEmailVerified(true);
+                                return customerRepository.save(customer);
+                            });
+                })
+                .then()
+                .doOnSuccess(v -> log.info("Email verified for token tenant={}", tenantId));
+    }
+
+    // ─── Forgot Password ──────────────────────────────────────────────────
+
+    public Mono<Void> forgotPassword(String email, String tenantId) {
+        return customerRepository.findByEmailAndTenantIdAndIsValid(email, tenantId, true)
+                .flatMap(customer -> {
+                    String token = UUID.randomUUID().toString().replace("-", "");
+                    String resetKey = RESET_PREFIX + tenantId + ":" + token;
+                    String resetLink = storefrontBaseUrl + "/reset-password?token=" + token;
+
+                    SendNotificationRequest notifyReq = new SendNotificationRequest();
+                    notifyReq.setUserId(customer.getId());
+                    notifyReq.setTenantId(tenantId);
+                    notifyReq.setChannel(NotificationChannel.EMAIL);
+                    notifyReq.setType(NotificationType.PASSWORD_RESET);
+                    notifyReq.setRecipient(email);
+                    notifyReq.setLanguage(customer.getPreferredLanguage() != null
+                            ? customer.getPreferredLanguage() : "en");
+                    notifyReq.setVariables(Map.of(
+                            "userName", customer.getDisplayName() != null
+                                    ? customer.getDisplayName() : email,
+                            "resetLink", resetLink
+                    ));
+
+                    return redisTemplate.opsForValue()
+                            .set(resetKey, String.valueOf(customer.getId()), RESET_TOKEN_TTL)
+                            .then(notificationService.send(notifyReq)
+                                    .onErrorResume(ex -> {
+                                        log.warn("Password reset email failed for {}: {}", email, ex.getMessage());
+                                        return Mono.empty();
+                                    }))
+                            .then();
+                })
+                .switchIfEmpty(Mono.defer(() -> {
+                    log.info("Password reset requested for unknown email: {}", email);
+                    return Mono.<Void>empty();
+                }))
+                .doOnSuccess(v -> log.info("Password reset email sent to {}", email));
+    }
+
+    // ─── Reset Password ───────────────────────────────────────────────────
+
+    @Transactional
+    public Mono<Void> resetPassword(String token, String newPassword, String tenantId) {
+        String resetKey = RESET_PREFIX + tenantId + ":" + token;
+        return redisTemplate.opsForValue().get(resetKey)
+                .switchIfEmpty(Mono.error(new BusinessException(
+                        ErrorCode.TOKEN_INVALID, HttpStatus.BAD_REQUEST, "Invalid or expired reset token")))
+                .flatMap(customerIdStr -> {
+                    Long customerId = Long.valueOf(customerIdStr);
+                    return redisTemplate.delete(resetKey)
+                            .then(customerRepository.findById(customerId))
+                            .switchIfEmpty(Mono.error(new BusinessException(
+                                    ErrorCode.CUSTOMER_NOT_FOUND, HttpStatus.NOT_FOUND)))
+                            .flatMap(customer -> {
+                                customer.setPasswordHash(passwordEncoder.encode(newPassword));
+                                return customerRepository.save(customer);
+                            });
+                })
+                .then()
+                .doOnSuccess(v -> log.info("Password reset completed for token tenant={}", tenantId));
     }
 
     // ─── Refresh ─────────────────────────────────────────────────────────

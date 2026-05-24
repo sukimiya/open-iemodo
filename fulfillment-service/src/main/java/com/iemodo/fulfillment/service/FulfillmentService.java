@@ -43,4 +43,9 @@ public interface FulfillmentService {
      * Get pending recommendations
      */
     Flux<StockTransferRecommendation> getPendingRecommendations(String tenantId);
+
+    /**
+     * Get available shipping rates for a destination and item set.
+     */
+    Mono<ShippingRateResponse> getShippingRates(ShippingRateRequest request, String tenantId);
 }

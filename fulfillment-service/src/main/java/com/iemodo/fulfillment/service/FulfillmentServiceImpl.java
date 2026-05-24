@@ -214,6 +214,79 @@ public class FulfillmentServiceImpl implements FulfillmentService {
     }
 
     @Override
+    public Mono<ShippingRateResponse> getShippingRates(ShippingRateRequest request, String tenantId) {
+        String destinationCountry = request.getDestinationCountry().toUpperCase();
+        boolean isDomestic = mockWarehouses.stream()
+                .anyMatch(w -> w.getCountryCode().equals(destinationCountry));
+
+        // Use the first matching-country warehouse for estimation, or the best-ranked one
+        MockWarehouse primaryWarehouse = mockWarehouses.stream()
+                .filter(w -> w.getCountryCode().equals(destinationCountry))
+                .findFirst()
+                .orElse(mockWarehouses.get(0));
+
+        int distance = (int) calculateDistance(
+                primaryWarehouse.getLatitude(), primaryWarehouse.getLongitude(),
+                39.9042, 116.4074);
+
+        int domesticDays = calculateDeliveryDays(primaryWarehouse.getCountryCode(), destinationCountry, distance);
+
+        List<CarrierOption> carriers = new ArrayList<>();
+        boolean domestic = isDomestic;
+
+        // Economy — cheapest, slowest
+        BigDecimal economyCost = primaryWarehouse.getBaseShippingCost()
+                .multiply(new BigDecimal("0.7")).setScale(2, RoundingMode.HALF_UP);
+        int economyDays = domestic ? domesticDays + 3 : domesticDays + 5;
+        carriers.add(CarrierOption.builder()
+                .carrierName("IEMODO Economy")
+                .carrierCode("ECONOMY")
+                .serviceType("ECONOMY")
+                .serviceDescription("Economy shipping with tracking")
+                .shippingCost(economyCost)
+                .estimatedTax(economyCost.multiply(new BigDecimal("0.1")).setScale(2, RoundingMode.HALF_UP))
+                .estimatedDeliveryDays(economyDays)
+                .isCheapest(true)
+                .isFastest(false)
+                .build());
+
+        // Standard — default
+        carriers.add(CarrierOption.builder()
+                .carrierName("IEMODO Standard")
+                .carrierCode("STANDARD")
+                .serviceType("STANDARD")
+                .serviceDescription("Standard shipping with full tracking")
+                .shippingCost(primaryWarehouse.getBaseShippingCost())
+                .estimatedTax(primaryWarehouse.getBaseShippingCost()
+                        .multiply(new BigDecimal("0.1")).setScale(2, RoundingMode.HALF_UP))
+                .estimatedDeliveryDays(domesticDays)
+                .isCheapest(false)
+                .isFastest(false)
+                .build());
+
+        // Express — most expensive, fastest
+        BigDecimal expressCost = primaryWarehouse.getBaseShippingCost()
+                .multiply(new BigDecimal("1.8")).setScale(2, RoundingMode.HALF_UP);
+        int expressDays = Math.max(1, domestic ? domesticDays - 2 : domesticDays - 3);
+        carriers.add(CarrierOption.builder()
+                .carrierName("IEMODO Express")
+                .carrierCode("EXPRESS")
+                .serviceType("EXPRESS")
+                .serviceDescription("Express shipping with priority handling")
+                .shippingCost(expressCost)
+                .estimatedTax(expressCost.multiply(new BigDecimal("0.1")).setScale(2, RoundingMode.HALF_UP))
+                .estimatedDeliveryDays(expressDays)
+                .isCheapest(false)
+                .isFastest(true)
+                .build());
+
+        return Mono.just(ShippingRateResponse.builder()
+                .destinationCountry(destinationCountry)
+                .carriers(carriers)
+                .build());
+    }
+
+    @Override
     public Flux<StockTransferRecommendation> getPendingRecommendations(String tenantId) {
         return recommendationRepository.findByRecommendationStatusAndTenantId(
                 StockTransferRecommendation.RecommendationStatus.PENDING.getValue(), tenantId);

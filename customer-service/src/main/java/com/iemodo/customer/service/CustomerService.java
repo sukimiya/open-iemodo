@@ -10,6 +10,7 @@ import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
+import reactor.core.publisher.Flux;
 import reactor.core.publisher.Mono;
 
 @Slf4j
@@ -57,6 +58,39 @@ public class CustomerService {
                 .map(this::toDTO);
     }
 
+    // ─── Admin ───────────────────────────────────────────────────────────────
+
+    public Flux<CustomerDTO> getAllCustomers(String tenantId) {
+        Flux<Customer> customers = tenantId != null && !tenantId.isBlank()
+                ? customerRepository.findAllByTenantIdAndIsValid(tenantId, true)
+                : customerRepository.findAllByIsValid(true);
+        return customers.map(this::toDTO);
+    }
+
+    public Mono<Void> suspendCustomer(Long id) {
+        return customerRepository.findById(id)
+                .switchIfEmpty(Mono.error(new BusinessException(
+                        ErrorCode.CUSTOMER_NOT_FOUND, HttpStatus.NOT_FOUND)))
+                .flatMap(customer -> {
+                    customer.setStatus(0);
+                    return customerRepository.save(customer);
+                })
+                .then();
+    }
+
+    public Mono<Void> activateCustomer(Long id) {
+        return customerRepository.findById(id)
+                .switchIfEmpty(Mono.error(new BusinessException(
+                        ErrorCode.CUSTOMER_NOT_FOUND, HttpStatus.NOT_FOUND)))
+                .flatMap(customer -> {
+                    customer.setStatus(1);
+                    return customerRepository.save(customer);
+                })
+                .then();
+    }
+
+    // ─── Mapping ──────────────────────────────────────────────────────────────
+
     private CustomerDTO toDTO(Customer customer) {
         return CustomerDTO.builder()
                 .id(customer.getId())
@@ -73,6 +107,8 @@ public class CustomerService {
                 .preferredCurrency(customer.getPreferredCurrency())
                 .preferredLanguage(customer.getPreferredLanguage())
                 .preferredCountry(customer.getPreferredCountry())
+                .status(customer.getStatus())
+                .lastLoginIp(customer.getLastLoginIp())
                 .createdAt(customer.getCreatedAt())
                 .updatedAt(customer.getUpdatedAt())
                 .build();

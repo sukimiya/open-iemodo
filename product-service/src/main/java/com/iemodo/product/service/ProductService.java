@@ -83,6 +83,32 @@ public class ProductService {
     }
 
     /**
+     * Enhanced search with price range, brand filter, and sorting.
+     * All filter params are nullable — omitted filters are skipped.
+     */
+    public Flux<Product> searchProducts(String keyword, String countryCode,
+                                         BigDecimal minPrice, BigDecimal maxPrice,
+                                         Long brandId, String sortBy,
+                                         int limit, int offset) {
+        String searchPattern = "%" + keyword + "%";
+        String sort = sortBy != null ? sortBy : "sale_count";
+
+        Flux<Product> results;
+        results = switch (sort) {
+            case "price_asc" -> productRepository.searchFilteredSortPriceAsc(
+                    searchPattern, minPrice, maxPrice, brandId, limit, offset);
+            case "price_desc" -> productRepository.searchFilteredSortPriceDesc(
+                    searchPattern, minPrice, maxPrice, brandId, limit, offset);
+            case "newest" -> productRepository.searchFilteredSortNewest(
+                    searchPattern, minPrice, maxPrice, brandId, limit, offset);
+            default -> productRepository.searchFilteredSortSaleCount(
+                    searchPattern, minPrice, maxPrice, brandId, limit, offset);
+        };
+
+        return results.filterWhen(product -> isVisibleInCountry(product.getId(), countryCode));
+    }
+
+    /**
      * Get featured products for a country.
      */
     public Flux<Product> getFeaturedProducts(String countryCode, int limit) {

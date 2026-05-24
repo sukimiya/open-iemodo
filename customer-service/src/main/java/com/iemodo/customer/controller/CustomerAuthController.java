@@ -115,6 +115,34 @@ public class CustomerAuthController {
                 });
     }
 
+    // ─── Email Verification ────────────────────────────────────────────────
+
+    @GetMapping("/verify-email")
+    public Mono<Response<Void>> verifyEmail(
+            @RequestHeader("X-TenantID") String tenantId,
+            @RequestParam String token) {
+        return authService.verifyEmail(token, tenantId)
+                .thenReturn(Response.<Void>success());
+    }
+
+    // ─── Password Reset ────────────────────────────────────────────────────
+
+    @PostMapping("/forgot-password")
+    public Mono<Response<Void>> forgotPassword(
+            @RequestHeader("X-TenantID") String tenantId,
+            @RequestBody @Valid ForgotPasswordRequest request) {
+        return authService.forgotPassword(request.getEmail(), tenantId)
+                .thenReturn(Response.<Void>success());
+    }
+
+    @PostMapping("/reset-password")
+    public Mono<Response<Void>> resetPassword(
+            @RequestHeader("X-TenantID") String tenantId,
+            @RequestBody @Valid ResetPasswordRequest request) {
+        return authService.resetPassword(request.getToken(), request.getNewPassword(), tenantId)
+                .thenReturn(Response.<Void>success());
+    }
+
     // ─── Token Management ─────────────────────────────────────────────────
 
     @PostMapping("/refresh")
