@@ -1,0 +1,41 @@
+package com.iemodo.customer.domain;
+
+import com.iemodo.common.entity.BaseEntity;
+import lombok.AllArgsConstructor;
+import lombok.Data;
+import lombok.EqualsAndHashCode;
+import lombok.NoArgsConstructor;
+import lombok.experimental.SuperBuilder;
+import org.springframework.data.relational.core.mapping.Table;
+
+import java.time.Instant;
+
+@Data
+@SuperBuilder
+@NoArgsConstructor
+@AllArgsConstructor
+@EqualsAndHashCode(callSuper = true)
+@Table("customer_refresh_tokens")
+public class CustomerRefreshToken extends BaseEntity {
+
+    private Long customerId;
+
+    /** SHA-256 hash of the raw token sent to the client. */
+    private String tokenHash;
+
+    private String deviceId;
+    private String userAgent;
+    private String ipAddress;
+
+    private Instant expiresAt;
+
+    private boolean revoked;
+
+    public boolean isExpired() {
+        return Instant.now().isAfter(expiresAt);
+    }
+
+    public boolean isValid() {
+        return !revoked && !isExpired();
+    }
+}

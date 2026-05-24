@@ -95,6 +95,11 @@
             <artifactId>notification-service</artifactId>
             <version>${project.version}</version>
         </dependency>
+        <dependency>
+            <groupId>com.iemodo</groupId>
+            <artifactId>customer-service</artifactId>
+            <version>${project.version}</version>
+        </dependency>
 
         <!-- JWT — needed for JWT WebFilter in monolith -->
         <dependency>

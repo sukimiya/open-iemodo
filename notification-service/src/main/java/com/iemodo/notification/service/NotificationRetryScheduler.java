@@ -1,11 +1,13 @@
 package com.iemodo.notification.service;
 
+import com.iemodo.common.tenant.TenantContext;
 import com.iemodo.notification.channel.ChannelSender;
 import com.iemodo.notification.config.ChannelSenderRegistry;
 import com.iemodo.notification.domain.NotificationRecord;
 import com.iemodo.notification.repository.NotificationRecordRepository;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Component;
 import reactor.core.publisher.Mono;
@@ -31,15 +33,19 @@ public class NotificationRetryScheduler {
     private final TemplateService templateService;
     private final ChannelSenderRegistry senderRegistry;
 
+    @Value("${iemodo.system-tenant-id:tenant_001}")
+    private String systemTenantId;
+
     @Scheduled(fixedDelay = 300_000)
     public void retryFailedNotifications() {
-        recordRepository.findFailedForRetry(MAX_RETRIES, BATCH_SIZE)
-                .flatMap(this::retryOne)
-                .doOnComplete(() -> log.debug("Notification retry cycle complete"))
-                .subscribe(
-                        null,
-                        ex -> log.error("Notification retry scheduler error", ex)
-                );
+        TenantContext.withTenantFlux(systemTenantId, () ->
+                recordRepository.findFailedForRetry(MAX_RETRIES, BATCH_SIZE)
+                        .flatMap(this::retryOne)
+                        .doOnComplete(() -> log.debug("Notification retry cycle complete"))
+        ).subscribe(
+                null,
+                ex -> log.error("Notification retry scheduler error", ex)
+        );
     }
 
     private Mono<Void> retryOne(NotificationRecord record) {

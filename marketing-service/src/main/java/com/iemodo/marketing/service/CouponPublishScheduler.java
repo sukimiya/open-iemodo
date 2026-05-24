@@ -1,8 +1,10 @@
 package com.iemodo.marketing.service;
 
+import com.iemodo.common.tenant.TenantContext;
 import com.iemodo.marketing.repository.CouponRepository;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Component;
 
@@ -21,16 +23,20 @@ public class CouponPublishScheduler {
 
     private final CouponRepository couponRepository;
 
+    @Value("${iemodo.system-tenant-id:tenant_001}")
+    private String systemTenantId;
+
     @Scheduled(fixedDelay = 60_000)
     public void publishScheduledCoupons() {
-        couponRepository.findScheduledToActivate(Instant.now())
-                .flatMap(coupon -> {
-                    coupon.setIsActive(true);
-                    return couponRepository.save(coupon);
-                })
-                .subscribe(
-                        coupon -> log.info("Auto-published coupon: {} ({})", coupon.getId(), coupon.getCouponCode()),
-                        ex -> log.error("Error auto-publishing coupons", ex)
-                );
+        TenantContext.withTenantFlux(systemTenantId, () ->
+                couponRepository.findScheduledToActivate(Instant.now())
+                        .flatMap(coupon -> {
+                            coupon.setIsActive(true);
+                            return couponRepository.save(coupon);
+                        })
+        ).subscribe(
+                coupon -> log.info("Auto-published coupon: {} ({})", coupon.getId(), coupon.getCouponCode()),
+                ex -> log.error("Error auto-publishing coupons", ex)
+        );
     }
 }

@@ -38,10 +38,11 @@ import java.util.List;
 
 /**
  * WebFilter that validates JWT Bearer tokens on every non-whitelisted request.
- * Replaces the Gateway's GlobalFilter for the iemodo-lite monolith.
- *
- * <p>On success, propagates X-User-ID and X-TenantID headers downstream.
- * On failure, returns 401 in the unified response format.
+ * Supports TWO independent JWT key pairs:
+ * <ul>
+ *   <li><b>User JWT</b> — signed by user-service, sets {@code X-User-ID} header</li>
+ *   <li><b>Customer JWT</b> — signed by customer-service, sets {@code X-Customer-ID} header</li>
+ * </ul>
  */
 @Slf4j
 @Component
@@ -49,6 +50,7 @@ public class JwtWebFilter implements WebFilter {
 
     private static final String BEARER_PREFIX = "Bearer ";
     private static final String BLACKLIST_PREFIX = "jwt:blacklist:";
+    private static final String CUSTOMER_BLACKLIST_PREFIX = "customer:jwt:blacklist:";
 
     private static final ObjectMapper MAPPER = new ObjectMapper()
             .registerModule(new JavaTimeModule())
@@ -58,7 +60,8 @@ public class JwtWebFilter implements WebFilter {
     private final ReactiveStringRedisTemplate redisTemplate;
     private final AntPathMatcher pathMatcher = new AntPathMatcher();
 
-    private PublicKey publicKey;
+    private PublicKey userPublicKey;
+    private PublicKey customerPublicKey;
 
     public JwtWebFilter(LiteGatewayProperties gatewayProperties,
                         ReactiveStringRedisTemplate redisTemplate) {
@@ -67,30 +70,35 @@ public class JwtWebFilter implements WebFilter {
     }
 
     @PostConstruct
-    public void loadPublicKey() {
+    public void loadPublicKeys() {
+        userPublicKey = loadKey(gatewayProperties.getJwt().getPublicKeyPath(), "user");
+        customerPublicKey = loadKey(gatewayProperties.getCustomerJwt().getPublicKeyPath(), "customer");
+    }
+
+    private PublicKey loadKey(String path, String label) {
+        if (path == null || path.isBlank()) {
+            log.warn("{} JWT public key path not configured", label);
+            return null;
+        }
         try {
-            Resource resource = new DefaultResourceLoader()
-                    .getResource(gatewayProperties.getJwt().getPublicKeyPath());
-
+            Resource resource = new DefaultResourceLoader().getResource(path);
             if (!resource.exists()) {
-                log.warn("JWT public key not found at '{}'. JWT validation will fail at runtime.",
-                        gatewayProperties.getJwt().getPublicKeyPath());
-                return;
+                log.warn("{} JWT public key not found at '{}'", label, path);
+                return null;
             }
-
             try (InputStream is = resource.getInputStream()) {
                 String pem = new String(is.readAllBytes(), StandardCharsets.UTF_8)
                         .replace("-----BEGIN PUBLIC KEY-----", "")
                         .replace("-----END PUBLIC KEY-----", "")
                         .replaceAll("\\s", "");
-
                 byte[] decoded = Base64.getDecoder().decode(pem);
-                X509EncodedKeySpec spec = new X509EncodedKeySpec(decoded);
-                publicKey = KeyFactory.getInstance("RSA").generatePublic(spec);
-                log.info("JWT RSA public key loaded from '{}'", gatewayProperties.getJwt().getPublicKeyPath());
+                PublicKey key = KeyFactory.getInstance("RSA").generatePublic(new X509EncodedKeySpec(decoded));
+                log.info("{} JWT RSA public key loaded from '{}'", label, path);
+                return key;
             }
         } catch (Exception e) {
-            log.error("Failed to load JWT public key: {}", e.getMessage(), e);
+            log.error("Failed to load {} JWT public key from '{}': {}", label, path, e.getMessage());
+            return null;
         }
     }
 
@@ -113,43 +121,88 @@ public class JwtWebFilter implements WebFilter {
 
         String token = authHeader.substring(BEARER_PREFIX.length()).trim();
 
-        // 3. Parse & validate JWT
-        Claims claims;
-        try {
-            if (publicKey == null) {
-                return unauthorized(exchange.getResponse(), "JWT validation unavailable — public key not loaded");
-            }
-            claims = Jwts.parser()
-                    .verifyWith((java.security.interfaces.RSAPublicKey) publicKey)
-                    .build()
-                    .parseSignedClaims(token)
-                    .getPayload();
-        } catch (ExpiredJwtException e) {
-            return unauthorized(exchange.getResponse(), "Token has expired");
-        } catch (JwtException e) {
-            return unauthorized(exchange.getResponse(), "Invalid token");
+        // 3. Try user JWT first (existing behavior)
+        JwtValidationResult userResult = tryValidate(token, userPublicKey, BLACKLIST_PREFIX);
+        if (userResult.isValid()) {
+            return handleUserToken(exchange, chain, userResult.claims());
         }
 
-        String jti = claims.getId();
-        String userId = claims.getSubject();
-        String tenantId = claims.get("tid", String.class);
+        // 4. If user JWT fails, try customer JWT
+        JwtValidationResult customerResult = tryValidate(token, customerPublicKey, CUSTOMER_BLACKLIST_PREFIX);
+        if (customerResult.isValid()) {
+            return handleCustomerToken(exchange, chain, customerResult.claims());
+        }
 
-        // 4. Check Redis blacklist (logout)
-        String blacklistKey = BLACKLIST_PREFIX + (jti != null ? jti : token);
-        return redisTemplate.hasKey(blacklistKey)
+        // 5. Both failed — return the user JWT error message (more informative)
+        return unauthorized(exchange.getResponse(), userResult.errorMessage());
+    }
+
+    private Mono<Void> handleUserToken(ServerWebExchange exchange, WebFilterChain chain, Claims claims) {
+        return checkBlacklist(claims, BLACKLIST_PREFIX)
                 .flatMap(blacklisted -> {
                     if (Boolean.TRUE.equals(blacklisted)) {
                         return unauthorized(exchange.getResponse(), "Token has been revoked");
                     }
-
-                    // 5. Propagate user info via headers
-                    ServerHttpRequest mutated = request.mutate()
+                    String userId = claims.getSubject();
+                    String tenantId = claims.get("tid", String.class);
+                    ServerHttpRequest mutated = exchange.getRequest().mutate()
                             .header("X-User-ID", userId != null ? userId : "")
                             .header("X-TenantID", tenantId != null ? tenantId : "")
                             .build();
-
                     return chain.filter(exchange.mutate().request(mutated).build());
                 });
+    }
+
+    private Mono<Void> handleCustomerToken(ServerWebExchange exchange, WebFilterChain chain, Claims claims) {
+        return checkBlacklist(claims, CUSTOMER_BLACKLIST_PREFIX)
+                .flatMap(blacklisted -> {
+                    if (Boolean.TRUE.equals(blacklisted)) {
+                        return unauthorized(exchange.getResponse(), "Token has been revoked");
+                    }
+                    String customerId = claims.getSubject();
+                    String tenantId = claims.get("tid", String.class);
+                    ServerHttpRequest mutated = exchange.getRequest().mutate()
+                            .header("X-Customer-ID", customerId != null ? customerId : "")
+                            .header("X-TenantID", tenantId != null ? tenantId : "")
+                            .build();
+                    return chain.filter(exchange.mutate().request(mutated).build());
+                });
+    }
+
+    private record JwtValidationResult(boolean valid, Claims claims, String errorMessage) {
+        static JwtValidationResult valid(Claims claims) {
+            return new JwtValidationResult(true, claims, null);
+        }
+        static JwtValidationResult invalid(String message) {
+            return new JwtValidationResult(false, null, message);
+        }
+        boolean isValid() { return valid; }
+    }
+
+    private JwtValidationResult tryValidate(String token, PublicKey publicKey, String blacklistPrefix) {
+        if (publicKey == null) {
+            return JwtValidationResult.invalid("JWT validation unavailable — public key not loaded");
+        }
+        try {
+            Claims claims = Jwts.parser()
+                    .verifyWith((java.security.interfaces.RSAPublicKey) publicKey)
+                    .build()
+                    .parseSignedClaims(token)
+                    .getPayload();
+            return JwtValidationResult.valid(claims);
+        } catch (ExpiredJwtException e) {
+            return JwtValidationResult.invalid("Token has expired");
+        } catch (JwtException e) {
+            return JwtValidationResult.invalid("Invalid token");
+        }
+    }
+
+    private Mono<Boolean> checkBlacklist(Claims claims, String prefix) {
+        String jti = claims.getId();
+        if (jti == null) {
+            return Mono.just(false);
+        }
+        return redisTemplate.hasKey(prefix + jti);
     }
 
     private boolean isWhitelisted(String method, String path) {

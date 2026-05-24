@@ -13,6 +13,7 @@ public final class Constants {
 
     public static final String HEADER_TENANT_ID = "X-TenantID";
     public static final String HEADER_USER_ID = "X-User-ID";
+    public static final String HEADER_CUSTOMER_ID = "X-Customer-ID";
     public static final String HEADER_TRACE_ID = "X-Trace-ID";
     public static final String HEADER_AUTHORIZATION = "Authorization";
     public static final String BEARER_PREFIX = "Bearer ";
@@ -22,6 +23,7 @@ public final class Constants {
     public static final String ROLE_USER = "ROLE_USER";
     public static final String ROLE_ADMIN = "ROLE_ADMIN";
     public static final String ROLE_TENANT_ADMIN = "ROLE_TENANT_ADMIN";
+    public static final String ROLE_CUSTOMER = "ROLE_CUSTOMER";
 
     // ─── OAuth2 Providers ──────────────────────────────────────────────────
 
@@ -69,6 +71,9 @@ public final class Constants {
     public static final String CACHE_PREFIX_USER = "user:";
     public static final String CACHE_PREFIX_SESSION = "session:";
     public static final String CACHE_PREFIX_TOKEN_BLACKLIST = "token:blacklist:";
+    public static final String CACHE_PREFIX_CUSTOMER_TOKEN_BLACKLIST = "customer:token:blacklist:";
+    public static final String CACHE_PREFIX_OTP = "otp:";
+    public static final String CACHE_PREFIX_OTP_RATELIMIT = "otp:ratelimit:";
     public static final String CACHE_PREFIX_RATE_LIMIT = "rate_limit:";
     public static final String CACHE_PREFIX_INVENTORY = "inventory:";
     public static final String CACHE_PREFIX_PRODUCT = "product:";

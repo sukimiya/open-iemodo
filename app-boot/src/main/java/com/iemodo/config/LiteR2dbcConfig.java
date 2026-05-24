@@ -22,7 +22,8 @@ import org.springframework.data.r2dbc.repository.config.EnableR2dbcRepositories;
     "com.iemodo.tenant.repository",
     "com.iemodo.rma.repository",
     "com.iemodo.review.repository",
-    "com.iemodo.notification.repository"
+    "com.iemodo.notification.repository",
+    "com.iemodo.customer.repository"
 })
 public class LiteR2dbcConfig {
 }

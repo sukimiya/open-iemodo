@@ -1,9 +1,11 @@
 package com.iemodo.payment.service;
 
+import com.iemodo.common.tenant.TenantContext;
 import com.iemodo.payment.domain.Payment;
 import com.iemodo.payment.repository.PaymentRepository;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Component;
 import reactor.core.publisher.Mono;
@@ -31,15 +33,19 @@ public class PaymentReconciliationScheduler {
     private final PaymentRepository  paymentRepository;
     private final StripePaymentProvider stripeProvider;
 
+    @Value("${iemodo.system-tenant-id:tenant_001}")
+    private String systemTenantId;
+
     // ─── Expired payment cancellation ────────────────────────────────────────
 
     @Scheduled(fixedDelay = 60_000)
     public void cancelExpiredPayments() {
-        paymentService.processExpiredPayments()
-                .subscribe(
-                        count -> { if (count > 0) log.info("Cancelled {} expired payments", count); },
-                        ex -> log.error("Error cancelling expired payments", ex)
-                );
+        TenantContext.withTenant(systemTenantId, () ->
+                paymentService.processExpiredPayments()
+        ).subscribe(
+                count -> { if (count > 0) log.info("Cancelled {} expired payments", count); },
+                ex -> log.error("Error cancelling expired payments", ex)
+        );
     }
 
     // ─── Stripe reconciliation (lost-webhook compensation) ───────────────────
@@ -55,18 +61,19 @@ public class PaymentReconciliationScheduler {
     public void reconcileStuckPayments() {
         Instant cutoff = Instant.now().minus(10, ChronoUnit.MINUTES);
 
-        paymentRepository.findStuckPayments(cutoff)
-                .flatMap(payment ->
-                        stripeProvider.retrievePayment(payment.getThirdPartyTxnId())
-                                .flatMap(result -> reconcilePayment(payment, result))
-                                .onErrorResume(ex -> {
-                                    log.error("Failed to reconcile payment={}", payment.getId(), ex);
-                                    return Mono.empty();
-                                }))
-                .subscribe(
-                        null,
-                        ex -> log.error("Reconciliation scheduler error", ex)
-                );
+        TenantContext.withTenantFlux(systemTenantId, () ->
+                paymentRepository.findStuckPayments(cutoff)
+                        .flatMap(payment ->
+                                stripeProvider.retrievePayment(payment.getThirdPartyTxnId())
+                                        .flatMap(result -> reconcilePayment(payment, result))
+                                        .onErrorResume(ex -> {
+                                            log.error("Failed to reconcile payment={}", payment.getId(), ex);
+                                            return Mono.empty();
+                                        }))
+        ).subscribe(
+                null,
+                ex -> log.error("Reconciliation scheduler error", ex)
+        );
     }
 
     /**

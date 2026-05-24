@@ -1,5 +1,6 @@
 package com.iemodo.user.service;
 
+import com.iemodo.common.tenant.TenantContext;
 import com.iemodo.user.repository.RefreshTokenRepository;
 import com.iemodo.user.repository.UserRepository;
 import lombok.RequiredArgsConstructor;
@@ -30,6 +31,9 @@ public class DataRetentionScheduler {
     private final RefreshTokenRepository refreshTokenRepository;
     private final UserRepository userRepository;
 
+    @Value("${iemodo.system-tenant-id:tenant_001}")
+    private String systemTenantId;
+
     @Value("${iemodo.gdpr.retention.user-data-days:365}")
     private int userDataRetentionDays;
 
@@ -42,8 +46,9 @@ public class DataRetentionScheduler {
     @Scheduled(cron = "0 0 3 * * ?")
     public void purgeExpiredTokens() {
         Instant cutoff = Instant.now().minusSeconds(tokenRetentionDays * 86400L);
-        refreshTokenRepository.deleteExpiredBefore(cutoff)
-                .doOnSuccess(count -> {
+        TenantContext.withTenant(systemTenantId, () ->
+                refreshTokenRepository.deleteExpiredBefore(cutoff)
+        ).doOnSuccess(count -> {
                     if (count > 0) {
                         log.info("Retention: purged {} expired tokens older than {} days", count, tokenRetentionDays);
                     }
@@ -61,8 +66,9 @@ public class DataRetentionScheduler {
     @Scheduled(cron = "0 30 3 * * ?")
     public void purgeDeletedUsers() {
         Instant cutoff = Instant.now().minusSeconds(userDataRetentionDays * 86400L);
-        userRepository.physicalDeleteDeletedBefore(cutoff)
-                .doOnSuccess(count -> {
+        TenantContext.withTenant(systemTenantId, () ->
+                userRepository.physicalDeleteDeletedBefore(cutoff)
+        ).doOnSuccess(count -> {
                     if (count > 0) {
                         log.info("Retention: physically purged {} users deleted before retention period", count);
                     }

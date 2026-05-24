@@ -47,6 +47,13 @@ public enum ErrorCode {
     FILE_STORAGE_ERROR(5003, "File storage operation failed"),
     CACHE_ERROR(5004, "Cache operation failed"),
 
+    // ─── Customer errors ─────────────────────────────────────
+    CUSTOMER_NOT_FOUND(4020, "Customer not found"),
+    CUSTOMER_ALREADY_EXISTS(4021, "Customer already exists"),
+    OTP_INVALID(4022, "Invalid or expired OTP"),
+    OTP_RATE_LIMITED(4023, "OTP sent too frequently, please try later"),
+    OAUTH2_EXCHANGE_FAILED(4024, "Failed to exchange OAuth2 authorization code"),
+
     // ─── Concurrency errors ─────────────────────────────────
     CONCURRENT_REQUEST(4090, "Concurrent request detected"),
     RATE_LIMIT_EXCEEDED(4290, "Rate limit exceeded"),

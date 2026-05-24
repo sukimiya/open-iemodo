@@ -28,6 +28,7 @@
         <module>fulfillment-service</module>
         <module>rma-service</module>
         <module>review-service</module>
+        <module>customer-service</module>
         <module>notification-service</module>
         <module>app-boot</module>
     </modules>

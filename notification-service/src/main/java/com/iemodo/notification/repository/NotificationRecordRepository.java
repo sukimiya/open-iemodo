@@ -19,6 +19,6 @@ public interface NotificationRecordRepository
     Mono<Boolean> existsByUserIdAndTypeAndSendStatus(Long userId, NotificationType type, String sendStatus);
 
     /** Failed notifications eligible for retry, ordered oldest-first. */
-    @Query("SELECT * FROM notification_records WHERE send_status = 'FAILED' AND retry_count < :maxRetries AND is_valid = true ORDER BY create_time ASC LIMIT :limit")
+    @Query("SELECT * FROM notification_records WHERE send_status = 'FAILED' AND retry_count < :maxRetries ORDER BY create_time ASC LIMIT :limit")
     Flux<NotificationRecord> findFailedForRetry(int maxRetries, int limit);
 }

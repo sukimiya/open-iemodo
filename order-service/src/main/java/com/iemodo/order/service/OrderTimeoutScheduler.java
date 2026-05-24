@@ -1,9 +1,11 @@
 package com.iemodo.order.service;
 
+import com.iemodo.common.tenant.TenantContext;
 import com.iemodo.order.domain.DelayTaskStatus;
 import com.iemodo.order.repository.OrderDelayTaskRepository;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Component;
 import reactor.core.publisher.Mono;
@@ -24,19 +26,23 @@ public class OrderTimeoutScheduler {
     private final OrderDelayTaskRepository orderDelayTaskRepository;
     private final OrderService             orderService;
 
+    @Value("${iemodo.system-tenant-id:tenant_001}")
+    private String systemTenantId;
+
     @Scheduled(fixedDelay = 30_000)
     public void processTimeoutOrders() {
-        orderDelayTaskRepository
-                .findByExecuteTimeBeforeAndTaskStatus(Instant.now(), DelayTaskStatus.PENDING)
-                .flatMap(task -> orderService.cancelTimedOutOrder(task)
-                        .onErrorResume(ex -> {
-                            log.error("Failed to process timeout task={} order={}",
-                                    task.getId(), task.getOrderId(), ex);
-                            return Mono.empty();
-                        }))
-                .subscribe(
-                        null,
-                        ex -> log.error("Timeout scheduler fatal error", ex)
-                );
+        TenantContext.withTenantFlux(systemTenantId, () ->
+                orderDelayTaskRepository
+                        .findByExecuteTimeBeforeAndTaskStatus(Instant.now(), DelayTaskStatus.PENDING)
+                        .flatMap(task -> orderService.cancelTimedOutOrder(task)
+                                .onErrorResume(ex -> {
+                                    log.error("Failed to process timeout task={} order={}",
+                                            task.getId(), task.getOrderId(), ex);
+                                    return Mono.empty();
+                                }))
+        ).subscribe(
+                null,
+                ex -> log.error("Timeout scheduler fatal error", ex)
+        );
     }
 }

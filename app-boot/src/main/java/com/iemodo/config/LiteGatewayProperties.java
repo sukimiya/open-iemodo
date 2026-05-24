@@ -10,10 +10,13 @@ import java.util.List;
 public class LiteGatewayProperties {
 
     private Jwt jwt = new Jwt();
+    private Jwt customerJwt = new Jwt();
     private List<String> whitelist = List.of();
 
     public Jwt getJwt() { return jwt; }
     public void setJwt(Jwt jwt) { this.jwt = jwt; }
+    public Jwt getCustomerJwt() { return customerJwt; }
+    public void setCustomerJwt(Jwt customerJwt) { this.customerJwt = customerJwt; }
     public List<String> getWhitelist() { return whitelist; }
     public void setWhitelist(List<String> whitelist) { this.whitelist = whitelist; }
 

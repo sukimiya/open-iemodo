@@ -1,5 +1,6 @@
 package com.iemodo.tenant.service;
 
+import com.iemodo.common.tenant.TenantContext;
 import com.iemodo.tenant.domain.Plan;
 import com.iemodo.tenant.repository.TenantRepository;
 import com.iemodo.tenant.repository.TenantSubscriptionRepository;
@@ -32,6 +33,9 @@ public class UsageAlertScheduler {
     private final UsageAlertLogRepository alertLogRepository;
     private final WebClient.Builder webClientBuilder;
 
+    @Value("${iemodo.system-tenant-id:tenant_001}")
+    private String systemTenantId;
+
     @Value("${iemodo.services.notification:http://notification-service:8089}")
     private String notificationServiceUrl;
 
@@ -53,13 +57,14 @@ public class UsageAlertScheduler {
      */
     @Scheduled(cron = "0 0 * * * ?")
     public void checkUsageAlerts() {
-        subscriptionRepository.findAll()
-                .filter(sub -> "ACTIVE".equals(sub.getSubscriptionStatus()))
-                .flatMap(sub -> {
-                    Plan plan = Plan.fromString(sub.getPlanId());
-                    return checkTenantAlerts(sub.getTenantId(), plan);
-                })
-                .doOnError(e -> log.error("Usage alert check failed", e))
+        TenantContext.withTenantFlux(systemTenantId, () ->
+                subscriptionRepository.findAll()
+                        .filter(sub -> "ACTIVE".equals(sub.getSubscriptionStatus()))
+                        .flatMap(sub -> {
+                            Plan plan = Plan.fromString(sub.getPlanId());
+                            return checkTenantAlerts(sub.getTenantId(), plan);
+                        })
+        ).doOnError(e -> log.error("Usage alert check failed", e))
                 .subscribe();
     }
 

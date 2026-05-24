@@ -83,6 +83,8 @@ iemodo:
   gateway:
     jwt:
       public-key-path: ${JWT_PUBLIC_KEY_PATH:classpath:jwt/public.pem}
+    customer-jwt:
+      public-key-path: ${CUSTOMER_JWT_PUBLIC_KEY_PATH:classpath:jwt/customer-public.pem}
     whitelist:
       - POST:/uc/api/v1/auth/register
       - POST:/uc/api/v1/auth/login
@@ -90,6 +92,14 @@ iemodo:
       - GET:/uc/api/v1/auth/oauth2/**
       - GET:/oauth2/authorization/**
       - GET:/login/oauth2/code/**
+      # Customer auth endpoints (whitelisted)
+      - POST:/cc/api/v1/auth/sms/send
+      - POST:/cc/api/v1/auth/sms/login
+      - POST:/cc/api/v1/auth/email/register
+      - POST:/cc/api/v1/auth/email/login
+      - POST:/cc/api/v1/auth/refresh
+      - GET:/cc/api/v1/auth/oauth2/**
+      - POST:/cc/api/v1/auth/oauth2/**
       - GET:/actuator/**
       - GET:/health
       - GET:/swagger-ui/**
@@ -105,6 +115,20 @@ iemodo:
       access-token-ttl-minutes: 60
       refresh-token-ttl-days: 30
       issuer: iemodo-user-service
+
+  # ─── Customer service JWT config ──────────────────────────────────────
+  customer:
+    jwt:
+      private-key-path: ${CUSTOMER_JWT_PRIVATE_KEY_PATH:classpath:jwt/customer-private.pem}
+      public-key-path: ${CUSTOMER_JWT_PUBLIC_KEY_PATH:classpath:jwt/customer-public.pem}
+      access-token-ttl-minutes: 60
+      refresh-token-ttl-days: 30
+      issuer: iemodo-customer-service
+    oauth2:
+      google:
+        client-id: ${CUSTOMER_GOOGLE_CLIENT_ID:placeholder}
+        client-secret: ${CUSTOMER_GOOGLE_CLIENT_SECRET:placeholder}
+        redirect-uri: ${CUSTOMER_GOOGLE_REDIRECT_URI:http://localhost:8080/cc/api/v1/auth/oauth2/google/callback}
 
   # ─── Payment (Stripe) ─────────────────────────────────────────────────
   payment:
@@ -147,6 +171,9 @@ management:
   endpoint:
     health:
       show-details: always
+  health:
+    mail:
+      enabled: false
     prometheus:
       enabled: true
   metrics:

@@ -76,6 +76,18 @@ public class MultitenantR2dbcConfiguration {
         PostgresTenantConnectionFactory routingFactory = new PostgresTenantConnectionFactory();
         routingFactory.setTargetConnectionFactories(factories);
         routingFactory.setSystemTenantId(tenantProperties.getSystemTenantId());
+
+        // Set a default so AbstractRoutingConnectionFactory.getMetadata() works
+        // (required by the R2DBC actuator health indicator).
+        String systemId = tenantProperties.getSystemTenantId();
+        ConnectionFactory defaultFactory = systemId != null ? factories.get(systemId) : null;
+        if (defaultFactory == null && !factories.isEmpty()) {
+            defaultFactory = factories.values().iterator().next();
+        }
+        if (defaultFactory != null) {
+            routingFactory.setDefaultTargetConnectionFactory(defaultFactory);
+        }
+
         routingFactory.afterPropertiesSet();
 
         log.info("Multi-tenant ConnectionFactory initialised with {} tenant(s): {}",

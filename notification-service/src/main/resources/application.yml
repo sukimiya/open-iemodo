@@ -53,6 +53,9 @@ management:
     web:
       exposure:
         include: health,info,metrics
+  health:
+    mail:
+      enabled: false  # MailHog is optional in dev; real SMTP validated at send time
 
 logging:
   level:
